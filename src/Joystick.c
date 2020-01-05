@@ -1,120 +1,5 @@
-/*
-Nintendo Switch Fightstick - Proof-of-Concept
-
-Based on the LUFA library's Low-Level Joystick Demo
-	(C) Dean Camera
-Based on the HORI's Pokken Tournament Pro Pad design
-	(C) HORI
-
-This project implements a modified version of HORI's Pokken Tournament Pro Pad
-USB descriptors to allow for the creation of custom controllers for the
-Nintendo Switch. This also works to a limited degree on the PS3.
-
-Since System Update v3.0.0, the Nintendo Switch recognizes the Pokken
-Tournament Pro Pad as a Pro Controller. Physical design limitations prevent
-the Pokken Controller from functioning at the same level as the Pro
-Controller. However, by default most of the descriptors are there, with the
-exception of Home and Capture. Descriptor modification allows us to unlock
-these buttons for our use.
-*/
-
 #include "Joystick.h"
-
-typedef enum {
-	UP,
-	DOWN,
-	LEFT,
-	RIGHT,
-	SPIN,
-	POSITION,
-	X,
-	Y,
-	A,
-	B,
-	L,
-	R,
-	PLUS,
-	MINUS,
-	HOME,
-	NOTHING,
-	TRIGGERS
-} Buttons_t;
-
-typedef struct {
-	Buttons_t button;
-	uint16_t duration;
-} command; 
-
-/*
-
-https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_base_Egg_cycles
-
- 5 cycles =  700 !! DO NOT FORGET TO UNCOMMENT THE "if 5 cycles (Magikarp)" PARTS !!
-10 cycles = 1400
-15 cycles = 2100
-20 cycles = 2800 (default)
-25 cycles = 3500
-30 cycles = 4200
-35 cycles = 4900
-40 cycles = 5600
-
-*/
-#define cycles 2800
-
-static const command step[] = {
-	// Setup controller
-						{ NOTHING,  150 },
-	{ TRIGGERS,   5 },	{ NOTHING,  150 },
-	{ TRIGGERS,   5 },	{ NOTHING,  150 },
-	{ A,          5 },	{ NOTHING,  100 },
-
-	// Open game
-	{ HOME,       5 },	{ NOTHING,  100 },
-	{ A,          5 },	{ NOTHING,  100 },
-
-	/* ###### Pokemon slot 2 ###### */
-	// teleport to daycare in wildarea
-	{ X,          5 },	{ NOTHING,  100 }, //open menu
-	{ A,          5 },	{ NOTHING,  100 }, 
-	{ A,          5 },	{ NOTHING,  100 }, //you want to teleport here?
-	{ A,          5 },	{ NOTHING,  100 }, //sure!
-
-	// walk to daycare and get an egg
-	{ DOWN,      70 },	{ NOTHING,    5 }, //walk down to daycare
-	{ LEFT,       5 },	{ NOTHING,    5 }, //a little bit left
-	{ A,          5 },	{ NOTHING,  100 }, //talk to her "I have an egg for you, do you want it?"
- 	{ A,          5 },	{ NOTHING,  200 }, //yes I do
-	{ A,          5 },	{ NOTHING,  100 }, //you got it
-	{ A,          5 },	{ NOTHING,  100 }, //Put egg on your team
-	{ A,          5 },	{ NOTHING,  100 }, //please select the slot!
-	{ DOWN,       5 },	{ NOTHING,    5 }, //select correct pokemon slot
-	{ A,          5 },	{ NOTHING,  100 }, //You sure want to put it here?
-	{ A,          5 },	{ NOTHING,  200 }, //Yes!
-	{ A,          5 },	{ NOTHING,  100 }, //take good care of it
-
-	// start hatching
-	{ PLUS,       5 },	{ NOTHING,    5 }, //get on your bike
-	{ POSITION,  50 },	{ NOTHING,    5 },
-	{ UP,        20 },	{ NOTHING,    5 },
-	{ POSITION,  60 },	{ NOTHING,    5 }, //get into position
-	{ SPIN,  cycles },	{ NOTHING,    5 }, //spin for X cycles
-
-	// egg hatched?
-	{ A,          5 },	{ NOTHING, 	825 }, //Oh
-	{ A,          5 },	{ NOTHING, 	125 }, //"Pokemon" hatched from the egg
-	{ B,          5 },	{ NOTHING, 	 10 },
-
-	// if 5 cycles (Magikarp) 
-	/*{ SPIN,  cycles },	{ NOTHING,    5 }, // extra rounds to make sure daycare have an egg
-	{ A,          5 },	{ NOTHING, 	825 },
-	{ A,          5 },	{ NOTHING, 	125 },
-	{ B,          5 },	{ NOTHING, 	 10 },*/
-
-	{ PLUS,       5 },	{ NOTHING,  100 }, //get off the bike
-
-	// repeat
-
-};
+#include "Bot.h"
 
 // Main entry point.
 int main(void) {
@@ -144,11 +29,10 @@ void SetupHardware(void) {
 
 	#ifdef ALERT_WHEN_DONE
 	// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
-	#warning LED and Buzzer functionality enabled. All pins on both PORTB and \
-PORTD will toggle when printing is done.
+	#warning LED and Buzzer functionality enabled. All pins on both PORTB and PORTD will toggle when printing is done.
 	DDRD  = 0xFF; //Teensy uses PORTD
 	PORTD =  0x0;
-                  //We'll just flash all pins on both ports since the UNO R3
+  //We'll just flash all pins on both ports since the UNO R3
 	DDRB  = 0xFF; //uses PORTB. Micro can use either or, but both give us 2 LEDs
 	PORTB =  0x0; //The ATmega328P on the UNO will be resetting, so unplug it?
 	#endif
@@ -236,13 +120,9 @@ typedef enum {
 } State_t;
 State_t state = SYNC_CONTROLLER;
 
-#define ECHOES 2
 int echoes = 0;
 USB_JoystickReport_Input_t last_report;
 
-int report_count = 0;
-int xpos = 0;
-int ypos = 0;
 int bufindex = 0;
 int duration_count = 0;
 int portsval = 0;
@@ -274,32 +154,6 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 			state = BREATHE;
 			break;
 
-		// case SYNC_CONTROLLER:
-		// 	if (report_count > 550)
-		// 	{
-		// 		report_count = 0;
-		// 		state = SYNC_POSITION;
-		// 	}
-		// 	else if (report_count == 250 || report_count == 300 || report_count == 325)
-		// 	{
-		// 		ReportData->Button |= SWITCH_L | SWITCH_R;
-		// 	}
-		// 	else if (report_count == 350 || report_count == 375 || report_count == 400)
-		// 	{
-		// 		ReportData->Button |= SWITCH_A;
-		// 	}
-		// 	else
-		// 	{
-		// 		ReportData->Button = 0;
-		// 		ReportData->LX = STICK_CENTER;
-		// 		ReportData->LY = STICK_CENTER;
-		// 		ReportData->RX = STICK_CENTER;
-		// 		ReportData->RY = STICK_CENTER;
-		// 		ReportData->HAT = HAT_CENTER;
-		// 	}
-		// 	report_count++;
-		// 	break;
-
 		case SYNC_POSITION:
 			bufindex = 0;
 
@@ -321,23 +175,23 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 
 		case PROCESS:
 
-			switch (step[bufindex].button)
+			switch (INPUTS[bufindex].button)
 			{
 
 				case UP:
-					ReportData->LY = STICK_MIN;				
+					ReportData->LY = STICK_MIN;
 					break;
 
 				case LEFT:
-					ReportData->LX = STICK_MIN;				
+					ReportData->LX = STICK_MIN;
 					break;
 
 				case DOWN:
-					ReportData->LY = STICK_MAX;				
+					ReportData->LY = STICK_MAX;
 					break;
 
 				case RIGHT:
-					ReportData->LX = STICK_MAX;				
+					ReportData->LX = STICK_MAX;
 					break;
 
 				case SPIN:
@@ -365,7 +219,7 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 				case X:
 					ReportData->Button |= SWITCH_X;
 					break;
-				
+
 				case Y:
 					ReportData->Button |= SWITCH_Y;
 					break;
@@ -397,19 +251,16 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 
 			duration_count++;
 
-			if (duration_count > step[bufindex].duration)
+			if (duration_count > INPUTS[bufindex].duration)
 			{
 				bufindex++;
-				duration_count = 0;				
+				duration_count = 0;
 			}
 
 
-			if (bufindex > (int)( sizeof(step) / sizeof(step[0])) - 1)
+			if (bufindex > INPUTS_LENGTH - 1)
 			{
-
-				// state = CLEANUP;
-
-				bufindex = 11;
+				bufindex = INPUT_REPEAT_BEGIN;
 				duration_count = 0;
 
 				state = BREATHE;
@@ -419,11 +270,6 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 				ReportData->RX = STICK_CENTER;
 				ReportData->RY = STICK_CENTER;
 				ReportData->HAT = HAT_CENTER;
-
-
-				// state = DONE;
-//				state = BREATHE;
-
 			}
 
 			break;
@@ -441,11 +287,6 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 			#endif
 			return;
 	}
-
-	// // Inking
-	// if (state != SYNC_CONTROLLER && state != SYNC_POSITION)
-	// 	if (pgm_read_byte(&(image_data[(xpos / 8) + (ypos * 40)])) & 1 << (xpos % 8))
-	// 		ReportData->Button |= SWITCH_A;
 
 	// Prepare to echo this report
 	memcpy(&last_report, ReportData, sizeof(USB_JoystickReport_Input_t));
