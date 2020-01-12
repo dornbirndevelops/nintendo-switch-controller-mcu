@@ -4,3 +4,4 @@ all:
 	make -f spam-a.mk
 	make -f wattsfarmer.mk
 	make -f wildareabreeding.mk
+	make -f dracofish.mk
