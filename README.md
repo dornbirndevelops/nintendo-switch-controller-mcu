@@ -19,7 +19,7 @@ git clone --recursive git@github.com:dornbirndevelops/nintendo-switch-controller
 
 ### 2. install required packages
 
-- Arduino IDE
+- Arduino IDE (this should install avr-gcc)
 - DFU Programmer (called FLIP on Windows):
 
 ```
@@ -122,6 +122,14 @@ _This uses the new VS date spamming exploit, look it up on youtube._
 4. exit the menu
 5. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
 6. plug in the Arduino UNO R3
+
+### Farm Dracovish `dracovish.hex`
+
+_make sure you have plenty of fossils in your inventory_
+
+1. place yourself in front of the fossil lady.
+2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
+3. plug in the Arduino UNO R3
 
 ### Release a full box of Pokémon `releasebox.hex`
 
