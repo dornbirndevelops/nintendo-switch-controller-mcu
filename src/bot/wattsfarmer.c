@@ -1,6 +1,6 @@
 #include "Bot.h"
 
-const int ECHOES = 2;
+const int ECHOES = 0;
 
 const command INPUTS[] = {
 	// Setup controller
@@ -10,79 +10,62 @@ const command INPUTS[] = {
 	{ A,          5 },	{ NOTHING,  250 },
 
 	// Go into game
-	{ HOME,       5 },	{ NOTHING,  250 },
-	{ A,          5 },	{ NOTHING,  250 },
+	{ HOME,       5 },	{ NOTHING,  100 },
+	{ HOME,       5 },	{ NOTHING,  150 },
 
-	// enter den with 2000 watts
-	{ A,          5 },	{ NOTHING,  10 },
-	{ A,          5 },	{ NOTHING,  10 },
-	{ A,          5 },	{ NOTHING,  20 },
+	// Energie strömt aus dem Pokemon-Nest!
+	{ A,          5 },	{ NOTHING,  350 },
+	// (Du erhälst 2 000 Watt!)
+	{ B,          5 },	{ NOTHING,  100 },
+	{ A,          5 },	{ NOTHING,  100 },
+	{ B,          5 },	{ NOTHING,  100 },
+	{ A,          5 },	{ NOTHING,  100 },
+	{ B,          5 },	{ NOTHING,  200 },
 
-	// start search
-	{ A,          5 },	{ NOTHING,  300 },
+	// Reopen dialog (this helps with the month reset)
+	{ A,       5 },			{ NOTHING,  100 },
 
-	// one day backward
-	{ HOME,       5 },		{ NOTHING,  80 },
-	{ DOWN,       5 },		{ NOTHING,  2 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ A,          5 },		{ NOTHING,  40 },
-	{ DOWN,       90 },		{ NOTHING,  10 },
-	{ A,          5 },		{ NOTHING,  20 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ A,          5 },		{ NOTHING,  20 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ A,          5 },		{ NOTHING,  20 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ RIGHT,      25 },		{ NOTHING,  5 },
-	{ A,          5 },		{ NOTHING,  5 },
-	{ HOME,       5 },		{ NOTHING,  80 },
-	{ A,          5 },		{ NOTHING,  20 },
+	// Mitspieler suchen
+	{ A,       5 },			{ NOTHING,  800 },
+	// One day forward
+	{ HOME,       5 },		{ NOTHING,  100 },
+	{ DOWN,       5 },		{ NOTHING,  100 },
+	{ RIGHT,      5 },		{ NOTHING,  50 },
+	{ RIGHT,      5 },		{ NOTHING,  50 },
+	{ RIGHT,      5 },		{ NOTHING,  50 },
+	{ RIGHT,      5 },		{ NOTHING,  50 },
+	{ A,					5 },		{ NOTHING,	100 },
+	// scroll to console
+	{ DOWN,       180 },	{ NOTHING,	50 },
+	{ A,          5 },		{ NOTHING,  50 },
 
-	// leave den
-	{ B,          5 },		{ NOTHING,  40 },
-	{ A,          5 },		{ NOTHING,  220 },
+	// go to date and time
+	{ DOWN,       5 },		{ NOTHING,  50 },
+	{ DOWN,       5 },		{ NOTHING,  50 },
+	{ DOWN,       5 },		{ NOTHING,  50 },
+	{ DOWN,       5 },		{ NOTHING,  50 },
+	{ A,          5 },		{ NOTHING,  50 },
 
-	// enter den without 2000 watts
-	{ A,          5 },		{ NOTHING,  20 },
+	// go to date and time setting
+	{ DOWN,       5 },		{ NOTHING,  50 },
+	{ DOWN,       5 },		{ NOTHING,  50 },
+	{ DOWN,       5 },		{ NOTHING,  50 },
+	{ A,          5 },		{ NOTHING,  100 },
 
-	// start search
-	{ A,          5 },		{ NOTHING,  300 },
+	// set one day forward
+	{ UP,         5 },		{ NOTHING,  50 },
+	{ RIGHT,      90 },		{ NOTHING,  50 },
+	{ A,          5 },		{ NOTHING,  50 },
 
-	// one day forward
-	{ HOME,       5 },		{ NOTHING,  80 },
-	{ DOWN,       5 },		{ NOTHING,  2 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ RIGHT,      5 },		{ NOTHING,  1 },
-	{ A,          5 },		{ NOTHING,  40 },
-	{ DOWN,       90 },		{ NOTHING,  10 },
-	{ A,          5 },		{ NOTHING,  20 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ A,          5 },		{ NOTHING,  20 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ DOWN,       5 },		{ NOTHING,  5 },
-	{ A,          5 },		{ NOTHING,  20 },
-	{ UP,         5 },		{ NOTHING,  5 },
-	{ RIGHT,      25 },		{ NOTHING,  5 },
-	{ A,          5 },		{ NOTHING,  5 },
-	{ HOME,       5 },		{ NOTHING,  80 },
-	{ A,          5 },		{ NOTHING,  20 },
+	// Go back into game
+	{ HOME,       5 },		{ NOTHING,  100 },
+	{ HOME,       5 },		{ NOTHING,  100 },
 
-	// leave den
-	{ B,          5 },		{ NOTHING,  40 },
-	{ A,          5 },		{ NOTHING,  220 },
+	// Willst du die Suche nach Mitspielern abbrechen?
+	{ B,          5 },		{ NOTHING,  150 },
 
+	// Ja
+	{ A,          5 },		{ NOTHING,  200 },
 };
 
 const int INPUT_REPEAT_BEGIN = 11;
