@@ -131,7 +131,7 @@ _make sure you have plenty of fossils in your inventory_
 2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
 3. plug in the Arduino UNO R3
 
-### Release a full box of Pokémon `releasebox.hex`
+### NOT WORKING YET DUE TO MEMORY LIMITS! WORK IN PROGRESS (Release a full box of Pokémon `releasebox.hex`)
 
 _be careful using this_
 
