@@ -19,11 +19,11 @@ git clone --recursive git@github.com:dornbirndevelops/nintendo-switch-controller
 
 ### 2. install required packages
 
-- Arduino IDE (this should install avr-gcc)
+- AVR Compiler
 - DFU Programmer (called FLIP on Windows):
 
 ```
-sudo apt install arduino dfu-programmer
+sudo apt install gcc-avr avr-libc dfu-programmer
 ```
 
 ### 3. Build Flash (.hex) files for Arduino UNO R3 (atmega16u2)
@@ -131,7 +131,7 @@ _make sure you have plenty of fossils in your inventory_
 2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
 3. plug in the Arduino UNO R3
 
-### NOT WORKING YET DUE TO MEMORY LIMITS! WORK IN PROGRESS (Release a full box of Pokémon `releasebox.hex`)
+### Release a full box of Pokémon `releasebox.hex`
 
 _be careful using this_
 

@@ -2,7 +2,7 @@
 
 const int ECHOES = 0;
 
-const command INPUTS[] = {
+const __flash command INPUTS[] = {
 	// Setup controller
 						{ NOTHING,  250 },
 	{ TRIGGERS,   5 },	{ NOTHING,  150 },
