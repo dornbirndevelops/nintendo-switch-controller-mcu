@@ -19,11 +19,11 @@ git clone --recursive git@github.com:dornbirndevelops/nintendo-switch-controller
 
 ### 2. install required packages
 
-- Arduino IDE (this should install avr-gcc)
+- AVR Compiler
 - DFU Programmer (called FLIP on Windows):
 
 ```
-sudo apt install arduino dfu-programmer
+sudo apt install gcc-avr avr-libc dfu-programmer
 ```
 
 ### 3. Build Flash (.hex) files for Arduino UNO R3 (atmega16u2)
@@ -66,11 +66,11 @@ sudo dfu-programmer atmega16u2 flash firmwares/Arduino-usbserial-atmega16u2-Uno-
 sudo dfu-programmer atmega16u2 reset
 ```
 
-**repeat-a** (just press a all the time in game)
+**spam-a** (just press a all the time in game)
 
 ```
 sudo dfu-programmer atmega16u2 erase
-sudo dfu-programmer atmega16u2 flash repeat-a.hex
+sudo dfu-programmer atmega16u2 flash spam-a.hex
 sudo dfu-programmer atmega16u2 reset
 ```
 
@@ -86,9 +86,9 @@ sudo dfu-programmer atmega16u2 reset
 
 ## Usage
 
-### Repeat A `repeat-a.hex`
+### Repeat A `spam-a.hex`
 
-_repeat-a just spams the A button. You can use it to farm Fossils at the Digging Duo and/or hunting Shiny Fossils at Route 6_
+_spam-a just spams the A button. You can use it to farm Fossils at the Digging Duo and/or hunting Shiny (default) Fossils at Route 6_
 
 1. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
 2. plug in the Arduino UNO R3
@@ -111,7 +111,7 @@ _This uses the new VS date spamming exploit, look it up on youtube._
 5. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
 6. plug in the Arduino UNO R3
 
-### Shiny breeding `wildareabreeding.hex`
+### Shiny breeding `wildareabreeding.hex` (NOT FULLY TESTED)
 
 - open wildareabreeding.c in src folder
 - change value at line 62 `#define cycles`to correct amount and save
@@ -131,7 +131,7 @@ _make sure you have plenty of fossils in your inventory_
 2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
 3. plug in the Arduino UNO R3
 
-### NOT WORKING YET DUE TO MEMORY LIMITS! WORK IN PROGRESS (Release a full box of Pokémon `releasebox.hex`)
+### Release a full box of Pokémon `releasebox.hex`
 
 _be careful using this_
 

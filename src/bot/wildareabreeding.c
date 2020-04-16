@@ -18,7 +18,7 @@ https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_base_Egg_cycles
 
 const int ECHOES = 2;
 
-const command INPUTS[] = {
+const __flash command INPUTS[] = {
 	// Setup controller
 						{ NOTHING,  150 },
 	{ TRIGGERS,   5 },	{ NOTHING,  150 },
