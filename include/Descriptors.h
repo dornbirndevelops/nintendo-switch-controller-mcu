@@ -10,27 +10,27 @@
 // Device Configuration Descriptor Structure
 typedef struct
 {
-	USB_Descriptor_Configuration_Header_t Config;
+    USB_Descriptor_Configuration_Header_t Config;
 
-	// Joystick HID Interface
-	USB_Descriptor_Interface_t            HID_Interface;
-	USB_HID_Descriptor_HID_t              HID_JoystickHID;
-	USB_Descriptor_Endpoint_t             HID_ReportOUTEndpoint;
-	USB_Descriptor_Endpoint_t             HID_ReportINEndpoint;
+    // Joystick HID Interface
+    USB_Descriptor_Interface_t            HID_Interface;
+    USB_HID_Descriptor_HID_t              HID_JoystickHID;
+    USB_Descriptor_Endpoint_t             HID_ReportOUTEndpoint;
+    USB_Descriptor_Endpoint_t             HID_ReportINEndpoint;
 } USB_Descriptor_Configuration_t;
 
 // Device Interface Descriptor IDs
 enum InterfaceDescriptors_t
 {
-	INTERFACE_ID_Joystick = 0, /**< Joystick interface descriptor ID */
+    INTERFACE_ID_Joystick = 0, /**< Joystick interface descriptor ID */
 };
 
 // Device String Descriptor IDs
 enum StringDescriptors_t
 {
-	STRING_ID_Language     = 0, // Supported Languages string descriptor ID (must be zero)
-	STRING_ID_Manufacturer = 1, // Manufacturer string ID
-	STRING_ID_Product      = 2, // Product string ID
+    STRING_ID_Language     = 0, // Supported Languages string descriptor ID (must be zero)
+    STRING_ID_Manufacturer = 1, // Manufacturer string ID
+    STRING_ID_Product      = 2, // Product string ID
 };
 
 // Macros
@@ -48,9 +48,9 @@ enum StringDescriptors_t
 
 // Function Prototypes
 uint16_t CALLBACK_USB_GetDescriptor(
-	const uint16_t wValue,
-	const uint16_t wIndex,
-	const void** const DescriptorAddress
+    const uint16_t wValue,
+    const uint16_t wIndex,
+    const void** const DescriptorAddress
 ) ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
 #endif

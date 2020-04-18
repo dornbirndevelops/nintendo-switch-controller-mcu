@@ -4,28 +4,28 @@
 #include <stdint.h>
 
 typedef enum {
-	UP,
-	DOWN,
-	LEFT,
-	RIGHT,
-	SPIN,
-	POSITION,
-	X,
-	Y,
-	A,
-	B,
-	L,
-	R,
-	PLUS,
-	MINUS,
-	HOME,
-	NOTHING,
-	TRIGGERS
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    SPIN,
+    POSITION,
+    X,
+    Y,
+    A,
+    B,
+    L,
+    R,
+    PLUS,
+    MINUS,
+    HOME,
+    NOTHING,
+    TRIGGERS
 } Buttons_t;
 
 typedef struct {
-	Buttons_t button;
-	uint16_t duration;
+    Buttons_t button;
+    uint16_t duration;
 } command;
 
 extern const __flash command INPUTS[];
