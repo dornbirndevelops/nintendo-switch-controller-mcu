@@ -1,7 +1,81 @@
 #include "Joystick.h"
 
+// initial state is no buttons pressed
+volatile USB_JoystickReport_Input_t commands[2] = {
+	{
+		.Button = 0,
+		.HAT = HAT_CENTER,
+		.LX = STICK_CENTER,
+		.LY = STICK_CENTER,
+		.RX = STICK_CENTER,
+		.RY = STICK_CENTER,
+		.VendorSpec = 0
+	},
+	{
+		.Button = SWITCH_A,
+		.HAT = HAT_CENTER,
+		.LX = STICK_CENTER,
+		.LY = STICK_CENTER,
+		.RX = STICK_CENTER,
+		.RY = STICK_CENTER,
+		.VendorSpec = 0
+	}
+};
+volatile unsigned char command_used = 0;
+
+#define COMMAND_USED commands[command_used]
+#define COMMAND_UNUSED commands[command_used ^ 1]
+
 /** Circular buffer to hold data from the serial port before it is sent to the host. */
 RingBuff_t USARTtoUSB_Buffer;
+
+void updateCommands() {
+	static unsigned char command_idx = 0;
+	// update the controller input if new data is available in buffer
+	unsigned char data;
+
+	RingBuff_Count_t BufferCount = RingBuffer_GetCount(&USARTtoUSB_Buffer);
+	while (BufferCount--) {
+		data = RingBuffer_Remove(&USARTtoUSB_Buffer);
+
+		// put new partial command into the build
+		switch (command_idx++)
+		{
+		case 0:
+			COMMAND_UNUSED.Button = data;
+			COMMAND_UNUSED.Button <<= 8;
+			break;
+		case 1:
+			COMMAND_UNUSED.Button |= data;
+			break;
+		case 2:
+			COMMAND_UNUSED.HAT |= data;
+			break;
+		case 3:
+			COMMAND_UNUSED.LX = data;
+			break;
+		case 4:
+			COMMAND_UNUSED.LY = data;
+			break;
+		case 5:
+			COMMAND_UNUSED.RX = data;
+			break;
+		case 6:
+			COMMAND_UNUSED.RY = data;
+			break;
+		case 7:
+			COMMAND_UNUSED.VendorSpec = data;
+			// last field is filled now.
+			// switch active commands
+			command_used ^= 1;
+			// reset idx so new command can be received
+			command_idx = 0;
+			break;
+		default:
+			break;
+		}
+	}
+}
 
 // Main entry point.
 int main(void) {
@@ -32,8 +106,11 @@ void SetupHardware(void) {
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
 
-	// setup pull-up resistor
+	// setup pull-up of RX
 	PORTD |= _BV(PORTD2);
+
+	// initialize serial port
+	Serial_Init(9600, false);
 
 	#ifdef ALERT_WHEN_DONE
 	// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
@@ -118,188 +195,14 @@ void HID_Task(void) {
 	}
 }
 
-typedef enum {
-	SYNC_CONTROLLER,
-	SYNC_POSITION,
-	BREATHE,
-	PROCESS,
-	CLEANUP,
-	DONE
-} State_t;
-State_t state = SYNC_CONTROLLER;
-
-int echoes = 0;
-USB_JoystickReport_Input_t last_report;
-
-int bufindex = 0;
-int duration_count = 0;
-int portsval = 0;
-
 // Prepare the next report for the host.
 void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
+	// partially update the command.
+	// used command will switch to a new if a new command has been completely set.
+	updateCommands();
 
-	// Prepare an empty report
-	memset(ReportData, 0, sizeof(USB_JoystickReport_Input_t));
-	ReportData->LX = STICK_CENTER;
-	ReportData->LY = STICK_CENTER;
-	ReportData->RX = STICK_CENTER;
-	ReportData->RY = STICK_CENTER;
-	ReportData->HAT = HAT_CENTER;
-
-	// Repeat ECHOES times the last report
-	if (echoes > 0)
-	{
-		memcpy(ReportData, &last_report, sizeof(USB_JoystickReport_Input_t));
-		echoes--;
-		return;
-	}
-
-	// States and moves management
-	switch (state)
-	{
-
-		case SYNC_CONTROLLER:
-			state = BREATHE;
-			break;
-
-		case SYNC_POSITION:
-			bufindex = 0;
-
-
-			ReportData->Button = 0;
-			ReportData->LX = STICK_CENTER;
-			ReportData->LY = STICK_CENTER;
-			ReportData->RX = STICK_CENTER;
-			ReportData->RY = STICK_CENTER;
-			ReportData->HAT = HAT_CENTER;
-
-
-			state = BREATHE;
-			break;
-
-		case BREATHE:
-			state = PROCESS;
-			break;
-
-		case PROCESS:
-
-			switch (INPUTS[bufindex].button)
-			{
-
-				case UP:
-					ReportData->LY = STICK_MIN;
-					break;
-
-				case LEFT:
-					ReportData->LX = STICK_MIN;
-					break;
-
-				case DOWN:
-					ReportData->LY = STICK_MAX;
-					break;
-
-				case RIGHT:
-					ReportData->LX = STICK_MAX;
-					break;
-
-				case SPIN:
-					ReportData->RX = STICK_MIN;
-					ReportData->LX = STICK_MIN;
-					break;
-
-				case POSITION:
-					ReportData->LY = STICK_MIN;
-					ReportData->LX = STICK_MAX;
-					break;
-
-				case A:
-					ReportData->Button |= SWITCH_A;
-					break;
-
-				case B:
-					ReportData->Button |= SWITCH_B;
-					break;
-
-				case R:
-					ReportData->Button |= SWITCH_R;
-					break;
-
-				case X:
-					ReportData->Button |= SWITCH_X;
-					break;
-
-				case Y:
-					ReportData->Button |= SWITCH_Y;
-					break;
-
-				case PLUS:
-					ReportData->Button |= SWITCH_PLUS;
-					break;
-
-				case MINUS:
-					ReportData->Button |= SWITCH_MINUS;
-					break;
-
-				case HOME:
-					ReportData->Button |= SWITCH_HOME;
-					break;
-
-				case TRIGGERS:
-					ReportData->Button |= SWITCH_L | SWITCH_R;
-					break;
-
-				default:
-					ReportData->LX = STICK_CENTER;
-					ReportData->LY = STICK_CENTER;
-					ReportData->RX = STICK_CENTER;
-					ReportData->RY = STICK_CENTER;
-					ReportData->HAT = HAT_CENTER;
-					break;
-			}
-
-			duration_count++;
-
-			if (duration_count > INPUTS[bufindex].duration)
-			{
-				bufindex++;
-				duration_count = 0;
-			}
-
-
-			if (bufindex > INPUTS_LENGTH - 1)
-			{
-				bufindex = INPUT_REPEAT_BEGIN;
-				duration_count = 0;
-
-				state = BREATHE;
-
-				ReportData->LX = STICK_CENTER;
-				ReportData->LY = STICK_CENTER;
-				ReportData->RX = STICK_CENTER;
-				ReportData->RY = STICK_CENTER;
-				ReportData->HAT = HAT_CENTER;
-			}
-
-			break;
-
-		case CLEANUP:
-			state = DONE;
-			break;
-
-		case DONE:
-			#ifdef ALERT_WHEN_DONE
-			portsval = ~portsval;
-			PORTD = portsval; //flash LED(s) and sound buzzer if attached
-			PORTB = portsval;
-			_delay_ms(250);
-			#endif
-			return;
-	}
-
-	// Prepare to echo this report
-	memcpy(&last_report, ReportData, sizeof(USB_JoystickReport_Input_t));
-	echoes = ECHOES;
-
+	// copy command to use
+	memcpy(ReportData, &COMMAND_USED, sizeof(USB_JoystickReport_Input_t));
 }
 
 /** ISR to manage the reception of data from the serial port, placing received bytes into a circular buffer
