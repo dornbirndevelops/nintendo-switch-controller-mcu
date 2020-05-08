@@ -1,10 +1,15 @@
 #include "Joystick.h"
-#include "Bot.h"
+
+/** Circular buffer to hold data from the serial port before it is sent to the host. */
+RingBuff_t USARTtoUSB_Buffer;
 
 // Main entry point.
 int main(void) {
 	// We'll start by performing hardware and peripheral setup.
 	SetupHardware();
+
+	RingBuffer_InitBuffer(&USARTtoUSB_Buffer);
+
 	// We'll then enable global interrupts for our use.
 	GlobalInterruptEnable();
 	// Once that's done, we'll enter an infinite loop.
@@ -26,6 +31,9 @@ void SetupHardware(void) {
 	// We need to disable clock division before initializing the USB hardware.
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
+
+	// setup pull-up resistor
+	PORTD |= _BV(PORTD2);
 
 	#ifdef ALERT_WHEN_DONE
 	// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
@@ -292,4 +300,15 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 	memcpy(&last_report, ReportData, sizeof(USB_JoystickReport_Input_t));
 	echoes = ECHOES;
 
+}
+
+/** ISR to manage the reception of data from the serial port, placing received bytes into a circular buffer
+ *  for later transmission to the host.
+ */
+ISR(USART1_RX_vect, ISR_BLOCK)
+{
+	uint8_t ReceivedByte = UDR1;
+
+	if (USB_DeviceState == DEVICE_STATE_Configured)
+	  RingBuffer_Insert(&USARTtoUSB_Buffer, ReceivedByte);
 }
