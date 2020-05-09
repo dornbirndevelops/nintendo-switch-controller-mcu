@@ -34,9 +34,6 @@ void SetupHardware(void) {
 	// We need to disable clock division before initializing the USB hardware.
 	clock_prescale_set(clock_div_1);
 
-	// setup pull-up of RX
-	PORTD |= _BV(PORTD2);
-
 	// initialize serial port
 	Serial_Init(9600, false);
 
