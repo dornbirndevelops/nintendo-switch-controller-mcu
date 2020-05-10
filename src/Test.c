@@ -4,6 +4,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#include <util/delay.h>
+
 #include <LUFA/Drivers/Peripheral/Serial.h>
 #include <LUFA/Drivers/Board/LEDs.h>
 
@@ -53,21 +55,30 @@ uint8_t Read(void) {
 void Loop(void) {
     static uint8_t state = 0;
 
+    if (CanWrite()) {
+        state ^= 1;
+        LEDs_ToggleLEDs(LEDMASK_TX);
+        Write(state);
+    }
+
     if (CanRead()) {
-        state = Read();
-        if (state) {
+        if (Read()) {
             LEDs_TurnOnLEDs(LEDMASK_RX);
         } else {
             LEDs_TurnOffLEDs(LEDMASK_RX);
         }
     }
+
+    Delay_MS(50);
 }
 
 // Main entry point.
 int main(void) {
 	Setup();
+    LEDs_TurnOffLEDs(LEDS_ALL_LEDS);
 
 	GlobalInterruptEnable();
+
 
 	for (;;)
 		Loop();
