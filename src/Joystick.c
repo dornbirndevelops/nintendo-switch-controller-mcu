@@ -1,4 +1,32 @@
+/**
+ * IMPORTANT!
+ * WHEN wiring the Arduino Uno R3 board,
+ * the TX and RX ports connected to the atmega16u2
+ * are switched since it is meant to be a middleman!!
+ *
+ * This means (from the atmega16u2 perspective):
+ * - Board Pin TX -> 1 = atmega16u2 Receive Pin
+ * - Board Pin RX <- 0 = atmega16u2 Transmit Pin
+ *
+ * in case you want to have the right pin configuration,
+ * write a simple Arduino Program for the ATmega328P
+ * working as a Serial bridge.
+ */
+
 #include "Joystick.h"
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+#include <util/delay.h>
+
+#include <LUFA/Drivers/Peripheral/Serial.h>
+#include <LUFA/Drivers/Board/LEDs.h>
+
+#include "LightweightRingBuff.h"
 
 // initial state is no buttons pressed
 volatile USB_JoystickReport_Input_t commands[2] = {
@@ -26,18 +54,16 @@ volatile unsigned char command_used = 0;
 #define COMMAND_USED commands[command_used]
 #define COMMAND_UNUSED commands[command_used ^ 1]
 
-/** Circular buffer to hold data from the serial port before it is sent to the host. */
-RingBuff_t USARTtoUSB_Buffer;
+RingBuff_t RX_Buffer;
 
 void updateCommands() {
 	static unsigned char command_idx = 0;
 	// update the controller input if new data is available in buffer
 	unsigned char data;
 
-	RingBuff_Count_t BufferCount = RingBuffer_GetCount(&USARTtoUSB_Buffer);
+	RingBuff_Count_t BufferCount = RingBuffer_GetCount(&RX_Buffer);
 	while (BufferCount--) {
-		data = RingBuffer_Remove(&USARTtoUSB_Buffer);
-
+		data = RingBuffer_Remove(&RX_Buffer);
 		// put new partial command into the build
 		switch (command_idx++)
 		{
@@ -49,7 +75,7 @@ void updateCommands() {
 			COMMAND_UNUSED.Button |= data;
 			break;
 		case 2:
-			COMMAND_UNUSED.HAT |= data;
+			COMMAND_UNUSED.HAT = data;
 			break;
 		case 3:
 			COMMAND_UNUSED.LX = data;
@@ -82,7 +108,8 @@ int main(void) {
 	// We'll start by performing hardware and peripheral setup.
 	SetupHardware();
 
-	RingBuffer_InitBuffer(&USARTtoUSB_Buffer);
+	// Initialize Buffer
+	RingBuffer_InitBuffer(&RX_Buffer);
 
 	// We'll then enable global interrupts for our use.
 	GlobalInterruptEnable();
@@ -106,11 +133,9 @@ void SetupHardware(void) {
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
 
-	// setup pull-up of RX
-	PORTD |= _BV(PORTD2);
-
-	// initialize serial port
+	// initialize serial port with interrupts
 	Serial_Init(9600, false);
+    UCSR1B |= (1<<RXCIE1);
 
 	#ifdef ALERT_WHEN_DONE
 	// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
@@ -208,10 +233,8 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
 /** ISR to manage the reception of data from the serial port, placing received bytes into a circular buffer
  *  for later transmission to the host.
  */
-ISR(USART1_RX_vect, ISR_BLOCK)
+ISR(USART1_RX_vect)
 {
 	uint8_t ReceivedByte = UDR1;
-
-	if (USB_DeviceState == DEVICE_STATE_Configured)
-	  RingBuffer_Insert(&USARTtoUSB_Buffer, ReceivedByte);
+	RingBuffer_Insert(&RX_Buffer, ReceivedByte);
 }
