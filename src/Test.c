@@ -1,3 +1,13 @@
+/**
+ * IMPORTANT!
+ * WHEN wiring the Arduino Uno R3 board,
+ * the TX and RX ports connected to the atmega16u2
+ * are switched since it is meant to be a middleman!!
+ *
+ * This means (from the atmega16u2 perspective):
+ * - Board Pin TX -> 1 = atmega16u2 Receive Pin
+ * - Board Pin RX <- 0 = atmega16u2 Transmit Pin
+ */
 #include <stdint.h>
 #include <stdbool.h>
 
