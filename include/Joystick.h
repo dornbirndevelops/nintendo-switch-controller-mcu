@@ -44,9 +44,6 @@
 #include <avr/pgmspace.h>
 #include <string.h>
 
-#include <LUFA/Version.h>
-#include <LUFA/Drivers/Board/LEDs.h>
-#include <LUFA/Drivers/Peripheral/Serial.h>
 #include <LUFA/Drivers/USB/USB.h>
 #include <LUFA/Drivers/Board/Joystick.h>
 #include <LUFA/Drivers/Board/LEDs.h>
@@ -54,7 +51,6 @@
 #include <LUFA/Platform/Platform.h>
 
 #include "Descriptors.h"
-#include "LightweightRingBuff.h"
 
 // Type Defines
 // Enumeration for joystick buttons.
