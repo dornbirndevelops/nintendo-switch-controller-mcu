@@ -1,6 +1,6 @@
 #
 #             LUFA Library
-#     Copyright (C) Dean Camera, 2014.
+#     Copyright (C) Dean Camera, 2017.
 #
 #  dean [at] fourwalledcubicle [dot] com
 #           www.lufa-lib.org
@@ -10,10 +10,9 @@
 # --------------------------------------
 
 # Run "make help" for target help.
-
-# Set the MCU accordingly to your device (e.g. at90usb1286 for a Teensy 2.0++, or atmega16u2 for an Arduino UNO R3)
 MCU          = atmega16u2
 ARCH         = AVR8
+BOARD		 = UNO
 F_CPU        = 16000000
 F_USB        = $(F_CPU)
 OPTIMIZATION = s
@@ -22,22 +21,27 @@ TARGET       = serial-test
 SRC_DIR      = src
 SRC          = $(SRC_DIR)/Test.c $(LUFA_SRC_USB)
 LUFA_PATH    = ./lufa/LUFA
-CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -Iinclude/
+CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig -Iinclude/
 LD_FLAGS     =
 
 # Default target
 all:
 
-# Include LUFA build script makefiles
-include $(LUFA_PATH)/Build/lufa_core.mk
-include $(LUFA_PATH)/Build/lufa_sources.mk
-include $(LUFA_PATH)/Build/lufa_build.mk
-include $(LUFA_PATH)/Build/lufa_cppcheck.mk
-include $(LUFA_PATH)/Build/lufa_doxygen.mk
-include $(LUFA_PATH)/Build/lufa_dfu.mk
-include $(LUFA_PATH)/Build/lufa_hid.mk
-include $(LUFA_PATH)/Build/lufa_avrdude.mk
-include $(LUFA_PATH)/Build/lufa_atprogram.mk
+# Include LUFA-specific DMBS extension modules
+DMBS_LUFA_PATH ?= $(LUFA_PATH)/Build/LUFA
+include $(DMBS_LUFA_PATH)/lufa-sources.mk
+include $(DMBS_LUFA_PATH)/lufa-gcc.mk
+
+# Include common DMBS build system modules
+DMBS_PATH      ?= $(LUFA_PATH)/Build/DMBS/DMBS
+include $(DMBS_PATH)/core.mk
+include $(DMBS_PATH)/cppcheck.mk
+include $(DMBS_PATH)/doxygen.mk
+include $(DMBS_PATH)/dfu.mk
+include $(DMBS_PATH)/gcc.mk
+include $(DMBS_PATH)/hid.mk
+include $(DMBS_PATH)/avrdude.mk
+include $(DMBS_PATH)/atprogram.mk
 
 # Target for LED/buzzer to alert when print is done
 with-alert: all
