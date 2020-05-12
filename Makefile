@@ -12,7 +12,8 @@
 # Run "make help" for target help.
 
 # Set the MCU accordingly to your device (e.g. at90usb1286 for a Teensy 2.0++, or atmega16u2 for an Arduino UNO R3)
-MCU          = atmega16u2
+# must be specified on command line
+# MCU          = atmega32u4
 ARCH         = AVR8
 F_CPU        = 16000000
 F_USB        = $(F_CPU)
