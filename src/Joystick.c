@@ -1,5 +1,9 @@
 #include "Joystick.h"
 #include "Bot.h"
+#include <LUFA/Drivers/Peripheral/Serial.h>
+
+void HID_Task(uint8_t c);
+void GetNextReport(USB_JoystickReport_Input_t* const ReportData, uint8_t c);
 
 const int ECHOES = 0;
 
@@ -53,17 +57,31 @@ const __flash command INPUTS[] = {
 const int INPUT_REPEAT_BEGIN = 11;
 const int INPUTS_LENGTH = sizeof(INPUTS)/sizeof(command);
 
+void AS_Serial_SendString(char* s) {
+    for (int i = 0; i < strlen(s); i += 1) {
+        Serial_SendByte(s[i]);
+    }
+}
+
 // Main entry point.
 int main(void) {
     // We'll start by performing hardware and peripheral setup.
     SetupHardware();
     // We'll then enable global interrupts for our use.
     GlobalInterruptEnable();
+
+    char c = '1';
     // Once that's done, we'll enter an infinite loop.
     for (;;)
     {
+        if (Serial_IsCharReceived()) {
+            c = Serial_ReceiveByte();
+            Serial_SendByte(c);
+            _delay_ms(100);
+        }
+
         // We need to run our task to process and deliver data for our IN and OUT endpoints.
-        HID_Task();
+        HID_Task(c);
         // We also need to run the main USB management task.
         USB_USBTask();
     }
@@ -89,6 +107,7 @@ void SetupHardware(void) {
     PORTB =  0x0; //The ATmega328P on the UNO will be resetting, so unplug it?
     #endif
     // The USB stack should be initialized last.
+    Serial_Init(9600, 0);
     USB_Init();
 }
 
@@ -121,7 +140,7 @@ void EVENT_USB_Device_ControlRequest(void) {
 }
 
 // Process and deliver data from IN and OUT endpoints.
-void HID_Task(void) {
+void HID_Task(uint8_t c) {
     // If the device isn't connected and properly configured, we can't do anything here.
     if (USB_DeviceState != DEVICE_STATE_Configured)
         return;
@@ -154,7 +173,7 @@ void HID_Task(void) {
         // We'll create an empty report.
         USB_JoystickReport_Input_t JoystickInputData;
         // We'll then populate this report with what we want to send to the host.
-        GetNextReport(&JoystickInputData);
+        GetNextReport(&JoystickInputData, c);
         // Once populated, we can output this data to the host. We do this by first writing the data to the control stream.
         while(Endpoint_Write_Stream_LE(&JoystickInputData, sizeof(JoystickInputData), NULL) != ENDPOINT_RWSTREAM_NoError);
         // We then send an IN packet on this endpoint.
@@ -180,7 +199,7 @@ int duration_count = 0;
 int portsval = 0;
 
 // Prepare the next report for the host.
-void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
+void GetNextReport(USB_JoystickReport_Input_t* const ReportData, uint8_t c) {
 
     // Prepare an empty report
     memset(ReportData, 0, sizeof(USB_JoystickReport_Input_t));
@@ -189,6 +208,10 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData) {
     ReportData->RX = STICK_CENTER;
     ReportData->RY = STICK_CENTER;
     ReportData->HAT = HAT_CENTER;
+
+    if (c == '0') {
+        return;
+    }
 
     // Repeat ECHOES times the last report
     if (echoes > 0)

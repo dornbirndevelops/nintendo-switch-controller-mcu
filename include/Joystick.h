@@ -110,14 +110,10 @@ typedef struct {
 // Function Prototypes
 // Setup all necessary hardware, including USB initialization.
 void SetupHardware(void);
-// Process and deliver data from IN and OUT endpoints.
-void HID_Task(void);
 // USB device event handlers.
 void EVENT_USB_Device_Connect(void);
 void EVENT_USB_Device_Disconnect(void);
 void EVENT_USB_Device_ConfigurationChanged(void);
 void EVENT_USB_Device_ControlRequest(void);
-// Prepare the next report for the host.
-void GetNextReport(USB_JoystickReport_Input_t* const ReportData);
 
 #endif
