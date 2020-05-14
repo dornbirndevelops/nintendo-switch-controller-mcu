@@ -20,9 +20,12 @@ tool to record a series of input commands for the serial switch conroller
   now the file with the setup inputs and the loop inputs is stored
 
 '''
+TEST_MODE = True
 from time import time_ns
-from serial import Serial
+if not TEST_MODE:
+    from serial import Serial
 from binascii import hexlify
+from pynput import keyboard
 
 
 def time_ms():
@@ -36,16 +39,18 @@ class CommandRecorder(object):
 
     def __enter__(self):
         self._file = open(self._filename, 'w')
-        self._serial = Serial(self._device)
+        if not TEST_MODE:
+            self._serial = Serial(self._device)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._file.close()
-        self._serial.close()
+        if not TEST_MODE:
+            self._serial.close()
 
-    def start(self):
+    def start(self, clear=False):
         # initialize state only in the beginning
-        if not self._state:
+        if clear:
             self._state = bytearray(
                 [
                     # Button H
@@ -89,7 +94,8 @@ class CommandRecorder(object):
 
     def _communicate(self):
         # send command
-        self._serial.write(self._state)
+        if not TEST_MODE:
+            self._serial.write(self._state)
 
     def button_set(self, button):
         # persist
@@ -177,37 +183,149 @@ def main(args):
     R_DOWN = (6, STICK_MAX)
 
     with CommandRecorder(args.filename, args.device) as cr:
-        print('press enter to start setup recording')
-        # press enter
-        cr.start()
-        # state is initialized
-        # ms is initialized
+        print(
+            '5: MINUS',
+            '6: PLUS',
+            't: CAPTURE',
+            'z: HOME',
+            'u: Y',
+            'i: B',
+            'o: X',
+            'p: A',
+            'f: L',
+            'd: ZL',
+            'j: R',
+            'k: ZR',
+            sep='\n'
+        )
+        print(
+            '1: L_LEFT',
+            '2: L_DOWN',
+            '3: L_UP',
+            '4: L_RIGHT',
+            '7: R_LEFT',
+            '8: R_DOWN',
+            '9: R_UP',
+            '0: R_RIGHT',
+            sep='\n'
+        )
+        buttons = {
+            '5': SWITCH_MINUS,
+            '6': SWITCH_PLUS,
+            't': SWITCH_CAPTURE,
+            'z': SWITCH_HOME,
+            'u': SWITCH_Y,
+            'i': SWITCH_B,
+            'o': SWITCH_X,
+            'p': SWITCH_A,
+            'f': SWITCH_L,
+            'd': SWITCH_ZL,
+            'j': SWITCH_R,
+            'k': SWITCH_ZR,
+        }
+        sticks = {
+            '1': L_LEFT,
+            '2': L_DOWN,
+            '3': L_UP,
+            '4': L_RIGHT,
+            '7': R_LEFT,
+            '8': R_DOWN,
+            '9': R_UP,
+            '0': R_RIGHT,
+        }
+        def on_press(key):
+            try:
+                action = buttons.get(key.char, None)
+                if action:
+                    cr.button_set(action)
+                    return
+                action = sticks.get(key.char, None)
+                if action:
+                    cr.stick_set(action)
+                    return
+            except AttributeError:
+                if key == keyboard.Key.enter:
+                    return False
 
-        import curses
-        curses.KEY_F46
-        # press "a" which is a button
-        cr.button_set(SWITCH_A)
+        def on_release(key):
+            try:
+                action = buttons.get(key.char, None)
+                if action:
+                    cr.button_clr(action)
+                    return
+                action = sticks.get(key.char, None)
+                if action:
+                    cr.stick_clr(action)
+                    return
+            except AttributeError:
+                if key == keyboard.Key.enter:
+                    return False
 
-        # release "a" which is a button
-        cr.button_clr(SWITCH_A)
-
-        print('press enter to stop setup recording')
-        # press enter a second time
+        input('press enter to start setup recording')
+        cr.start(clear=True)
+        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+            print('recording... enter to stop')
+            print(
+                '5: MINUS',
+                '6: PLUS',
+                't: CAPTURE',
+                'z: HOME',
+                'u: Y',
+                'i: B',
+                'o: X',
+                'p: A',
+                'f: L',
+                'd: ZL',
+                'j: R',
+                'k: ZR',
+                sep='\n'
+            )
+            print(
+                '1: L_LEFT',
+                '2: L_DOWN',
+                '3: L_UP',
+                '4: L_RIGHT',
+                '7: R_LEFT',
+                '8: R_DOWN',
+                '9: R_UP',
+                '0: R_RIGHT',
+                sep='\n'
+            )
+            listener.join()
         cr.stop()
 
-        print('press enter to start loop recording')
-        # press enter a third time
+        input('press enter to start loop recording')
         cr.start()
-
-        # press "a" which is a button
-        cr.button_set(SWITCH_A)
-
-        # release "a" which is a button
-        cr.button_clr(SWITCH_A)
-
-        print('press enter to stop loop recording')
+        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+            print('recording... enter to stop')
+            print(
+                '5: MINUS',
+                '6: PLUS',
+                't: CAPTURE',
+                'z: HOME',
+                'u: Y',
+                'i: B',
+                'o: X',
+                'p: A',
+                'f: L',
+                'd: ZL',
+                'j: R',
+                'k: ZR',
+                sep='\n'
+            )
+            print(
+                '1: L_LEFT',
+                '2: L_DOWN',
+                '3: L_UP',
+                '4: L_RIGHT',
+                '7: R_LEFT',
+                '8: R_DOWN',
+                '9: R_UP',
+                '0: R_RIGHT',
+                sep='\n'
+            )
+            listener.join()
         cr.stop()
-
     print('finished')
 
 
@@ -220,22 +338,42 @@ if __name__ == "__main__":
         description='tool to record a series of input commands for the serial switch conroller'
     )
 
+    if TEST_MODE:
+        parser.add_argument(
+            "--file", "-f",
+            dest="filename",
+            required=False,
+            default="asdf",
+            help="where to store the commands",
+            metavar="filename",
+        )
+    else:
     # adding arguments
-    parser.add_argument(
-        "--file", "-f",
-        dest="filename",
-        required=True,
-        help="where to store the commands",
-        metavar="filename",
-    )
+        parser.add_argument(
+            "--file", "-f",
+            dest="filename",
+            required=True,
+            help="where to store the commands",
+            metavar="filename",
+        )
 
-    parser.add_argument(
-        "--serial", "-s",
-        dest="device",
-        required=True,
-        help="where to send the commands to",
-        metavar="device_adress",
-    )
+    if TEST_MODE:
+        parser.add_argument(
+            "--serial", "-s",
+            dest="device",
+            required=False,
+            default="qwer",
+            help="where to send the commands to",
+            metavar="device_adress",
+        )
+    else:
+        parser.add_argument(
+            "--serial", "-s",
+            dest="device",
+            required=True,
+            help="where to send the commands to",
+            metavar="device_adress",
+        )
 
     # parse arguments
     args = parser.parse_args()
