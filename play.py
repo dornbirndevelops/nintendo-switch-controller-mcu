@@ -1,8 +1,6 @@
-from pynput.keyboard import Listener, Key
 from binascii import unhexlify
 from time import sleep
 from serial import Serial
-import os.path
 
 
 class CommandPlayer(object):

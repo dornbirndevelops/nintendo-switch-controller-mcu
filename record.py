@@ -194,7 +194,6 @@ def main(args):
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
-    import os.path
 
     # creating a parser
     parser = ArgumentParser(
