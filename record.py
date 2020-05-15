@@ -1,332 +1,195 @@
 #!/usr/bin/env python
 '''
 tool to record a series of input commands for the serial switch conroller
-/dev/ttyS0
-
-
-
-  setup phase
-  run once
-
-  loop phase
-  repeated many (n) times
-
-  record:
-  r - start setup recording
-  now record every input with its timing for the setup
-  r - stop setup recording and start loop recording
-  now record every input with its timing for the loop
-  r - stop loop recording
-  now the file with the setup inputs and the loop inputs is stored
-
 '''
-TEST_MODE = True
-from time import time_ns
-if not TEST_MODE:
-    from serial import Serial
+from pynput.keyboard import Listener, Key
 from binascii import hexlify
-from pynput import keyboard
+from time import time_ns
+from serial import Serial
 
 
 def time_ms():
     return time_ns() // 1000000
 
 
+STICK_MIN = 0x00
+STICK_CENTER = 0x80
+STICK_MAX = 0xff
+
+# values to pass into button functions
+Y = (1, 0x01)
+B = (1, 0x02)
+A = (1, 0x04)
+X = (1, 0x08)
+L = (1, 0x10)
+R = (1, 0x20)
+ZL = (1, 0x40)
+ZR = (1, 0x80)
+MINUS = (0, 0x01)
+PLUS = (0, 0x02)
+LCLICK = (0, 0x04)
+RCLICK = (0, 0x08)
+HOME = (0, 0x10)
+CAPTURE = (0, 0x20)
+
+# values to pass into stick functions
+L_LEFT = (3, STICK_MIN)
+L_RIGHT = (3, STICK_MAX)
+L_UP = (4, STICK_MIN)
+L_DOWN = (4, STICK_MAX)
+R_LEFT = (5, STICK_MIN)
+R_RIGHT = (5, STICK_MAX)
+R_UP = (6, STICK_MIN)
+R_DOWN = (6, STICK_MAX)
+
+
 class CommandRecorder(object):
     def __init__(self, filename, device):
         self._filename = filename
         self._device = device
+        self._state = bytearray([
+            # Button H (MINUS, PLUS, LCLICK, RCLICK, HOME, CAPTURE)
+            0x0,
+            # Button L (Y, B, A, X, L, R, ZL, ZR)
+            0x0,
+            # HAT (not modified)
+            0x8,
+            # LX
+            STICK_CENTER,
+            # LY
+            STICK_CENTER,
+            # RX
+            STICK_CENTER,
+            # RY
+            STICK_CENTER,
+            # VendorSpec (not modified)
+            0x0
+        ])
+        self._press_actions = {
+            'p': lambda: self._button_set(A),
+            'o': lambda: self._button_set(B),
+            'i': lambda: self._button_set(X),
+            'u': lambda: self._button_set(Y),
+            'w': lambda: self._stick_set(L_UP),
+            'a': lambda: self._stick_set(L_LEFT),
+            's': lambda: self._stick_set(L_DOWN),
+            'd': lambda: self._stick_set(L_RIGHT),
+            'f': lambda: self._button_set(L),
+            'g': lambda: self._button_set(ZL),
+            'j': lambda: self._button_set(R),
+            'h': lambda: self._button_set(ZR),
+            'm': lambda: self._button_set(HOME),
+            'c': lambda: self._button_set(CAPTURE),
+            'v': lambda: self._button_set(MINUS),
+            'n': lambda: self._button_set(PLUS),
+            Key.up: lambda: self._stick_set(R_UP),
+            Key.left: lambda: self._stick_set(R_LEFT),
+            Key.down: lambda: self._stick_set(R_DOWN),
+            Key.right: lambda: self._stick_set(R_RIGHT),
+            Key.enter: lambda: self._file.write('\n')
+        }
+        self._release_actions = {
+            'p': lambda: self._button_clr(A),
+            'o': lambda: self._button_clr(B),
+            'i': lambda: self._button_clr(X),
+            'u': lambda: self._button_clr(Y),
+            'w': lambda: self._stick_clr(L_UP),
+            'a': lambda: self._stick_clr(L_LEFT),
+            's': lambda: self._stick_clr(L_DOWN),
+            'd': lambda: self._stick_clr(L_RIGHT),
+            'f': lambda: self._button_clr(L),
+            'g': lambda: self._button_clr(ZL),
+            'j': lambda: self._button_clr(R),
+            'h': lambda: self._button_clr(ZR),
+            'm': lambda: self._button_clr(HOME),
+            'c': lambda: self._button_clr(CAPTURE),
+            'v': lambda: self._button_clr(MINUS),
+            'n': lambda: self._button_clr(PLUS),
+            Key.up: lambda: self._stick_clr(R_UP),
+            Key.left: lambda: self._stick_clr(R_LEFT),
+            Key.down: lambda: self._stick_clr(R_DOWN),
+            Key.right: lambda: self._stick_clr(R_RIGHT),
+            Key.enter: None
+        }
+        self._last_action = None
 
     def __enter__(self):
         self._file = open(self._filename, 'w')
-        if not TEST_MODE:
-            self._serial = Serial(self._device)
+        self._serial = Serial(self._device)
+        self._kl = Listener(on_press=self._press, on_release=self._release)
+        self._kl.setDaemon(True)
+        self._ms = time_ms()
+        self._kl.start()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._file.close()
-        if not TEST_MODE:
-            self._serial.close()
+        self._serial.close()
+        self._kl.stop()
 
-    def start(self, clear=False):
-        # initialize state only in the beginning
-        if clear:
-            self._state = bytearray(
-                [
-                    # Button H
-                    0x0,
-                    # Button L
-                    0x0,
-                    # HAT
-                    0x8,
-                    # LX
-                    0x80,
-                    # LY
-                    0x80,
-                    # RX
-                    0x80,
-                    # RY
-                    0x80,
-                    # VendorSpec
-                    0x0
-                ]
-            )
-        self._ms = time_ms()
-
-    def stop(self):
-        self._persist()
-
-        # add empty line
-        self._file.write('\n')
-
-    def _persist(self):
-        # get current time
-        ms = time_ms()
-
-        # write "state timediff" to file
-        self._file.write('{} {}\n'.format(
-            hexlify(self._state).decode(),
-            ms - self._ms
-        ))
-
-        # update time
-        self._ms = ms
-
-    def _communicate(self):
-        # send command
-        if not TEST_MODE:
-            self._serial.write(self._state)
-
-    def button_set(self, button):
-        # persist
-        self._persist()
-
-        # perform update
+    def _button_set(self, button):
         self._state[button[0]] |= button[1]
 
-        # communicate
-        self._communicate()
-
-    def button_clr(self, button):
-        # persist
-        self._persist()
-
-        # perform update
+    def _button_clr(self, button):
         self._state[button[0]] &= ~button[1]
 
-        # communicate
-        self._communicate()
-
-    def stick_set(self, stick):
-        # persist
-        self._persist()
-
-        # perform update
+    def _stick_set(self, stick):
         self._state[stick[0]] = stick[1]
 
-        # communicate
-        self._communicate()
+    def _stick_clr(self, stick):
+        self._state[stick[0]] = STICK_CENTER
 
-    def stick_clr(self, stick):
-        # persist
-        self._persist()
+    def _act(self, key, isPressed):
+        try:
+            keycode = key.char
+        except AttributeError:
+            keycode = key
+        finally:
+            action = self._press_actions.get(
+                keycode, None) if isPressed else self._release_actions.get(keycode, None)
 
-        # perform update
-        self._state[stick[0]] = 0x80
+            if not action or action == self._last_action:
+                return
 
-        # communicate
-        self._communicate()
+            self._last_action = action
+
+            # get current time
+            ms = time_ms()
+
+            # write old state with the duration it was active to file
+            self._file.write('{} {}\n'.format(
+                hexlify(self._state).decode(),
+                ms - self._ms
+            ))
+
+            # update time
+            self._ms = ms
+
+            # perform action
+            action()
+
+            # send new state to serial
+            # serial
+
+    def _press(self, key):
+        self._act(key, True)
+
+    def _release(self, key):
+        self._act(key, False)
+
+    def record(self):
+        # setup phase
+        print('starting recording\n')
+        input('recording setup. press enter to proceed\n')
+
+        # loop phase
+        input('recording loop. press enter to proceed\n')
+        print('done recording\n')
 
 
 def main(args):
-    '''
-    create a recording of a series of input commands and store them in a file
-    '''
-    HAT_TOP = 0x00
-    HAT_TOP_RIGHT = 0x01
-    HAT_RIGHT = 0x02
-    HAT_BOTTOM_RIGHT = 0x03
-    HAT_BOTTOM = 0x04
-    HAT_BOTTOM_LEFT = 0x05
-    HAT_LEFT = 0x06
-    HAT_TOP_LEFT = 0x07
-    HAT_CENTER = 0x08
-
-    STICK_MIN = 0x00
-    STICK_CENTER = 0x80
-    STICK_MAX = 0xff
-
-    # values to pass into button functions
-    SWITCH_Y = (1, 0x01)
-    SWITCH_B = (1, 0x02)
-    SWITCH_A = (1, 0x04)
-    SWITCH_X = (1, 0x08)
-    SWITCH_L = (1, 0x10)
-    SWITCH_R = (1, 0x20)
-    SWITCH_ZL = (1, 0x40)
-    SWITCH_ZR = (1, 0x80)
-    SWITCH_MINUS = (0, 0x01)
-    SWITCH_PLUS = (0, 0x02)
-    SWITCH_LCLICK = (0, 0x04)
-    SWITCH_RCLICK = (0, 0x08)
-    SWITCH_HOME = (0, 0x10)
-    SWITCH_CAPTURE = (0, 0x20)
-
-    # values to pass into stick functions
-    L_LEFT = (3, STICK_MIN)
-    L_RIGHT = (3, STICK_MAX)
-    L_UP = (4, STICK_MIN)
-    L_DOWN = (4, STICK_MAX)
-    R_LEFT = (5, STICK_MIN)
-    R_RIGHT = (5, STICK_MAX)
-    R_UP = (6, STICK_MIN)
-    R_DOWN = (6, STICK_MAX)
-
     with CommandRecorder(args.filename, args.device) as cr:
-        print(
-            '5: MINUS',
-            '6: PLUS',
-            't: CAPTURE',
-            'z: HOME',
-            'u: Y',
-            'i: B',
-            'o: X',
-            'p: A',
-            'f: L',
-            'd: ZL',
-            'j: R',
-            'k: ZR',
-            sep='\n'
-        )
-        print(
-            '1: L_LEFT',
-            '2: L_DOWN',
-            '3: L_UP',
-            '4: L_RIGHT',
-            '7: R_LEFT',
-            '8: R_DOWN',
-            '9: R_UP',
-            '0: R_RIGHT',
-            sep='\n'
-        )
-        buttons = {
-            '5': SWITCH_MINUS,
-            '6': SWITCH_PLUS,
-            't': SWITCH_CAPTURE,
-            'z': SWITCH_HOME,
-            'u': SWITCH_Y,
-            'i': SWITCH_B,
-            'o': SWITCH_X,
-            'p': SWITCH_A,
-            'f': SWITCH_L,
-            'd': SWITCH_ZL,
-            'j': SWITCH_R,
-            'k': SWITCH_ZR,
-        }
-        sticks = {
-            '1': L_LEFT,
-            '2': L_DOWN,
-            '3': L_UP,
-            '4': L_RIGHT,
-            '7': R_LEFT,
-            '8': R_DOWN,
-            '9': R_UP,
-            '0': R_RIGHT,
-        }
-        def on_press(key):
-            try:
-                action = buttons.get(key.char, None)
-                if action:
-                    cr.button_set(action)
-                    return
-                action = sticks.get(key.char, None)
-                if action:
-                    cr.stick_set(action)
-                    return
-            except AttributeError:
-                if key == keyboard.Key.enter:
-                    return False
-
-        def on_release(key):
-            try:
-                action = buttons.get(key.char, None)
-                if action:
-                    cr.button_clr(action)
-                    return
-                action = sticks.get(key.char, None)
-                if action:
-                    cr.stick_clr(action)
-                    return
-            except AttributeError:
-                if key == keyboard.Key.enter:
-                    return False
-
-        input('press enter to start setup recording')
-        cr.start(clear=True)
-        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-            print('recording... enter to stop')
-            print(
-                '5: MINUS',
-                '6: PLUS',
-                't: CAPTURE',
-                'z: HOME',
-                'u: Y',
-                'i: B',
-                'o: X',
-                'p: A',
-                'f: L',
-                'd: ZL',
-                'j: R',
-                'k: ZR',
-                sep='\n'
-            )
-            print(
-                '1: L_LEFT',
-                '2: L_DOWN',
-                '3: L_UP',
-                '4: L_RIGHT',
-                '7: R_LEFT',
-                '8: R_DOWN',
-                '9: R_UP',
-                '0: R_RIGHT',
-                sep='\n'
-            )
-            listener.join()
-        cr.stop()
-
-        input('press enter to start loop recording')
-        cr.start()
-        with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-            print('recording... enter to stop')
-            print(
-                '5: MINUS',
-                '6: PLUS',
-                't: CAPTURE',
-                'z: HOME',
-                'u: Y',
-                'i: B',
-                'o: X',
-                'p: A',
-                'f: L',
-                'd: ZL',
-                'j: R',
-                'k: ZR',
-                sep='\n'
-            )
-            print(
-                '1: L_LEFT',
-                '2: L_DOWN',
-                '3: L_UP',
-                '4: L_RIGHT',
-                '7: R_LEFT',
-                '8: R_DOWN',
-                '9: R_UP',
-                '0: R_RIGHT',
-                sep='\n'
-            )
-            listener.join()
-        cr.stop()
-    print('finished')
+        cr.record()
 
 
 if __name__ == "__main__":
@@ -338,80 +201,25 @@ if __name__ == "__main__":
         description='tool to record a series of input commands for the serial switch conroller'
     )
 
-    if TEST_MODE:
-        parser.add_argument(
-            "--file", "-f",
-            dest="filename",
-            required=False,
-            default="asdf",
-            help="where to store the commands",
-            metavar="filename",
-        )
-    else:
     # adding arguments
-        parser.add_argument(
-            "--file", "-f",
-            dest="filename",
-            required=True,
-            help="where to store the commands",
-            metavar="filename",
-        )
+    parser.add_argument(
+        "--file", "-f",
+        dest="filename",
+        required=True,
+        help="where to store the commands",
+        metavar="filename",
+    )
 
-    if TEST_MODE:
-        parser.add_argument(
-            "--serial", "-s",
-            dest="device",
-            required=False,
-            default="qwer",
-            help="where to send the commands to",
-            metavar="device_adress",
-        )
-    else:
-        parser.add_argument(
-            "--serial", "-s",
-            dest="device",
-            required=True,
-            help="where to send the commands to",
-            metavar="device_adress",
-        )
+    parser.add_argument(
+        "--serial", "-s",
+        dest="device",
+        required=True,
+        help="where to send the commands to",
+        metavar="device_adress",
+    )
 
     # parse arguments
     args = parser.parse_args()
 
     # run main program
     main(args)
-
-
-#     # represent & initialize state
-#     ButtonH = 0
-#     ButtonL = 0
-#     HAT = 8
-#     LX = STICK_CENTER
-#     LY = STICK_CENTER
-#     RX = STICK_CENTER
-#     RY = STICK_CENTER
-#     VendorSpec = 0
-#     state = bytearray([ButtonH, ButtonL, HAT, LX, LY, RX, RY, VendorSpec])
-
-#     # manipulate state
-#     # buttons change a bit
-#     def button_set(button):
-#         state[button[0]] |= button[1]
-
-#     def button_clr(button):
-#         state[button[0]] &= ~button[1]
-
-#     # sticks change a byte
-#     def stick_set(stick):
-#         state[stick[0]] = stick[1]
-
-#     def stick_clr(stick):
-#         state[stick[0]] = STICK_CENTER
-
-#     # some key is pressed. each key knows its bit or byte it manipulates
-#     import serial
-#     ser = serial.Serial('/dev/ttyS0')
-#     ser.write(state)
-
-#     # close it in the end
-#     ser.close()
