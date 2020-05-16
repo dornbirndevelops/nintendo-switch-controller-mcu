@@ -1,12 +1,15 @@
 # Nintendo Switch Controller Arduino
 
-control your Nintendo Switch using an Arduino UNO R3
+control your Nintendo Switch using an Arduino UNO R3 and a Raspberry Pi
 
 ## Requirements
 
-- Arduino Uno (R3)
+- Arduino Uno (R3) + USB cable
+- Computer with Serial support via TXD/RXD (I used a Raspberry Pi)
+- Nintendo Switch
+- Xbox 360 controller (attached to RPi during record, optional but helpful)
+- Level Shifter (3 to 5 Volt) for serial communication between RPi and Arduino
 - Tiny jumper cable (female female) to flash intermediate device chip
-- USB cable
 - Linux System like Ubuntu (Debian)
 
 ## Installation
@@ -19,14 +22,18 @@ git clone --recursive git@github.com:dornbirndevelops/nintendo-switch-controller
 
 ### 2. install required packages
 
-- AVR Compiler
-- DFU Programmer (called FLIP on Windows):
+- AVR Compiler (if you wish to build from source)
+- DFU Programmer (required to flash Arduino USB2Serial-Controller):
+- Python packages
 
 ```
 sudo apt install gcc-avr avr-libc dfu-programmer
+pip install -r requirements.txt
 ```
 
 ### 3. Build Flash (.hex) files for Arduino UNO R3 (atmega16u2)
+
+for minimal setup, note that a precompiled binary is provided in firmares directory.
 
 ```
 make
@@ -56,7 +63,7 @@ lsusb
 # Bus 001 Device 005: ID 03eb:2fef Atmel Corp.
 ```
 
-5. decide, which .hex-file you want to flash onto your atmega16u2, few examples are below:
+5. decide, which .hex-file you want to flash onto your atmega16u2:
 
 **default firmware**
 
@@ -66,11 +73,11 @@ sudo dfu-programmer atmega16u2 flash firmwares/Arduino-usbserial-atmega16u2-Uno-
 sudo dfu-programmer atmega16u2 reset
 ```
 
-**spam-a** (just press a all the time in game)
+**serial-controller** (apply inputs received from Serial port at 9600 baud, 8 bit data, 1 stop, no parity)
 
 ```
 sudo dfu-programmer atmega16u2 erase
-sudo dfu-programmer atmega16u2 flash spam-a.hex
+sudo dfu-programmer atmega16u2 flash firmwares/serial-controller.hex
 sudo dfu-programmer atmega16u2 reset
 ```
 
@@ -86,58 +93,52 @@ sudo dfu-programmer atmega16u2 reset
 
 ## Usage
 
-### Repeat A `spam-a.hex`
+### Wiring
 
-_spam-a just spams the A button. You can use it to farm Fossils at the Digging Duo and/or hunting Shiny (default) Fossils at Route 6_
+The connection chain looks like the following:
+Nintento Switch <- USB -- Arduino UNO R3 <- Serial (TX PIN!!!) + Serial connection <- Raspberry Pi (also TX!!!) <- (Xbox360Controller)
 
-1. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-2. plug in the Arduino UNO R3
+Wire them in the following order (with no power on!!):
 
-### Watts Farm `wattsfarmer.hex`
+#### Connection between Raspberry Pi and Arduino UNO R3
 
-1. walk to a den and throw an Wishing Piece in it
-2. use the date spoofing exploit until the den glows red (don't go in yet!)
-3. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-4. plug in the Arduino UNO R3
+For Serial Communication between these two, it is recommended to use a Voltage Level Shifter (3.3/5 Volt)
+On Rasperry Pi side:
 
-#### Masterballs `masterballs.hex`
+- GND to Level Shifter GND (low voltage side)
+- 3.3V to Level Shifter 3.3V (low voltage side)
+- TXD to Level Shifter Channel (low voltage side)
 
-_This uses the new VS date spamming exploit, look it up on youtube._
+On Arduino Uno R3 side:
 
-1. Enable the VS date spam exploit
-2. go into a Pokécenter right in front of the computer
-3. make sure you can play the lottery today (do not play yet)
-4. set you switch clock settigns to manual mode
-5. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-6. plug in the Arduino UNO R3
+- GND to Level Shifter GND (high voltage side)
+- 5V to Level Shifter 5V (high voltage side)
+- TXD to Level Shifter Channel (high voltage side)
 
-### Shiny breeding `wildareabreeding.hex` (NOT FULLY TESTED)
+Before asking why you should connect TX from Raspberry (sender) and the TX from Arduino UNO R3 (also sender?!?),
+note that the usually programmed Chip on the Arduino is the ATmega328P. The chip involved in this project usually is the
+middleman, a USB to Serial converter. In conclusion, from the ATmega16U2 point of view the external TX and RX pins are swapped.
+Therefore on the ATmega16U2 the sender is the RX port from the board and vice versa.
 
-- open wildareabreeding.c in src folder
-- change value at line 62 `#define cycles`to correct amount and save
+#### Connection between Nintendo Switch and Arduino UNO R3
 
-1. fly to the daycare in the wild area
-2. your party needs to be full and in the first slot should be a Pokémon with the **Flame Body** ability
-3. selection in menu needs to hover the map button
-4. exit the menu
-5. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-6. plug in the Arduino UNO R3
+Just plug in the USB cable into a USB Port of the Docking Station.
 
-### Farm Dracovish `dracovish.hex`
+### Start
 
-_make sure you have plenty of fossils in your inventory_
+When you have everything connected properly, start the Raspberry Pi first.
+Start the Nintendo Switch next.
+Start the Arduino UNO R3 by connecting the USB cable to the Nintendo Switch.
 
-1. place yourself in front of the fossil lady.
-2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-3. plug in the Arduino UNO R3
+### Run a bot
 
-### Release a full box of Pokémon `releasebox.hex`
+To run a Bot input routine, execute the `bot_player.py` python script:
 
-_be careful using this_
+```
+python bot_player.py -f path/to/botfile -s /dev/myserial0
+```
 
-1. open the box you want to release
-2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-3. plug in the Arduino UNO R3
+this transmits the controller commands listed in `path/to/botfile` to the serial connection `/dev/myserial0`
 
 ## Thanks
 

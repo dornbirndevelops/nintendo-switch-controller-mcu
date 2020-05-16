@@ -1,0 +1,2 @@
+pyserial==3.4
+xbox360controller==1.1.2
