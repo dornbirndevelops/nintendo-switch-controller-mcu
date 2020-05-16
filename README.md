@@ -1,4 +1,4 @@
-# Nintendo Switch Controller Arduino
+# Nintendo Switch Controller Arduino (documentation updated soon!)
 
 control your Nintendo Switch using an Arduino UNO R3 and a Raspberry Pi
 
