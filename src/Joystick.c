@@ -13,8 +13,6 @@
  * working as a Serial bridge.
  */
 
-//#define TEST_MODE
-
 #include "Joystick.h"
 
 #include <stdint.h>
@@ -33,14 +31,14 @@
 // initial state is no buttons pressed
 volatile USB_JoystickReport_Input_t commands[2] = {
 	{.Button = 0,
-	 .HAT = HAT_CENTER,
+	 .DPAD = DPAD_CENTER,
 	 .LX = STICK_CENTER,
 	 .LY = STICK_CENTER,
 	 .RX = STICK_CENTER,
 	 .RY = STICK_CENTER,
 	 .VendorSpec = 0},
-	{.Button = SWITCH_A,
-	 .HAT = HAT_CENTER,
+	{.Button = 0,
+	 .DPAD = DPAD_CENTER,
 	 .LX = STICK_CENTER,
 	 .LY = STICK_CENTER,
 	 .RX = STICK_CENTER,
@@ -49,7 +47,7 @@ volatile USB_JoystickReport_Input_t commands[2] = {
 volatile unsigned char command_used = 0;
 
 #define COMMAND_USED commands[command_used]
-#define COMMAND_UNUSED commands[command_used ^ 1]
+#define COMMAND_UNUSED commands[1]
 
 RingBuff_t RX_Buffer;
 
@@ -59,13 +57,12 @@ void updateCommands()
 	// update the controller input if new data is available in buffer
 	unsigned char data;
 
+	command_used ^= 1;
+
 	RingBuff_Count_t BufferCount = RingBuffer_GetCount(&RX_Buffer);
 	while (BufferCount--)
 	{
 		data = RingBuffer_Remove(&RX_Buffer);
-#ifdef TEST_MODE
-		command_used ^= 1;
-#else
 		// put new partial command into the build
 		switch (command_idx++)
 		{
@@ -77,7 +74,7 @@ void updateCommands()
 			COMMAND_UNUSED.Button |= data;
 			break;
 		case 2:
-			COMMAND_UNUSED.HAT = data;
+			COMMAND_UNUSED.DPAD = data;
 			break;
 		case 3:
 			COMMAND_UNUSED.LX = data;
@@ -102,7 +99,6 @@ void updateCommands()
 		default:
 			break;
 		}
-#endif
 	}
 }
 
