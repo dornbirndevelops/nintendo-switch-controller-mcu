@@ -20,6 +20,10 @@ class BotPlayer(object):
                     setup_read = True
                     continue
 
+                # skip comments
+                if line.startswith('#'):
+                    continue
+
                 raw, duration = line.split(' ')
                 state = (unhexlify(raw.encode()), int(duration))
                 if setup_read:
