@@ -1,4 +1,4 @@
-import signal
+from signal import pause
 from xbox360controller import Xbox360Controller
 from serial import Serial
 from time import sleep
@@ -175,6 +175,6 @@ try:
         controller.button_thumb_r.when_released = lambda b: button_release(
             RCLICK)
 
-        signal.pause()
+        pause()
 except KeyboardInterrupt:
     pass
