@@ -47,19 +47,17 @@ volatile USB_JoystickReport_Input_t commands[2] = {
 volatile unsigned char command_used = 0;
 
 #define COMMAND_USED commands[command_used]
-#define COMMAND_UNUSED commands[1]
+#define COMMAND_UNUSED commands[command_used ^ 1]
 
 RingBuff_t RX_Buffer;
 
 void updateCommands()
 {
-	static unsigned char command_idx = 0;
+	static volatile unsigned char command_idx = 0;
 	// update the controller input if new data is available in buffer
-	unsigned char data;
+	volatile unsigned char data;
 
-	command_used ^= 1;
-
-	RingBuff_Count_t BufferCount = RingBuffer_GetCount(&RX_Buffer);
+	volatile RingBuff_Count_t BufferCount = RingBuffer_GetCount(&RX_Buffer);
 	while (BufferCount--)
 	{
 		data = RingBuffer_Remove(&RX_Buffer);
