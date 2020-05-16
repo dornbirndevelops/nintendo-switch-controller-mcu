@@ -103,7 +103,6 @@ class BotRecorder(object):
     def __enter__(self):
         self._file = open(self._filename, 'w')
         self._serial = Serial(self._device)
-        self._ms = time_ms()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -161,6 +160,9 @@ class BotRecorder(object):
         self._state[stick[1]] = transform(round(axis.y))
         self._after_event()
 
+    def start(self):
+        self._ms = time_ms()
+
     def next_phase(self):
         self._before_event()
         self._file.write('\n')
@@ -169,6 +171,7 @@ class BotRecorder(object):
 def main(args):
     with BotRecorder(args.filename, args.device) as recorder, Xbox360Controller(0) as controller:
         input('hit enter to start recording\n')
+
         # Axis
         # Sticks
         controller.axis_l.when_moved = lambda a: recorder.stick_move(
@@ -228,6 +231,9 @@ def main(args):
             RCLICK)
         controller.button_thumb_r.when_released = lambda b: recorder.button_release(
             RCLICK)
+
+        recorder.start()
+
         print('setup recording started...\n')
         input('hit enter to proceed to loop phase\n')
 
