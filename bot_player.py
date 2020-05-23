@@ -54,10 +54,8 @@ class BotPlayer(object):
         while number == 0:
             self._loop()
 
-        iteration = 0
-        while iteration < number:
+        for iteration in range(number):
             self._loop()
-            iteration += 1
 
 
 def main(args):
