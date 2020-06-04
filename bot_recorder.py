@@ -151,7 +151,7 @@ class BotRecorder(object):
         sleep(1 / 60)
 
         self._before_event()
-        state[2] = DPAD_CENTER
+        self._state[2] = DPAD_CENTER
         self._after_event()
 
     def stick_move(self, axis, stick):  # works but inaccurate
