@@ -1,0 +1,37 @@
+# initiate dialog
+0004088080808000 50
+# wait for choice box to come up
+0000088080808000 380
+# participate
+0004088080808000 50
+# to participate you need a password. continue?
+0000088080808000 1200
+# yes
+0004088080808000 50
+# connecting
+0000088080808000 3200
+# begin battle
+0004088080808000 50
+# wait for password input
+0000088080808000 1000
+# password input starts at 1. layout is as follows
+# 1 2 3 delete
+# 4 5 6 confirm
+# 7 8 9 confirm
+#   0   confirm
+# from 1 to 4
+00000880ff808000 40
+# enter 4 -> 4___
+0004088080808000 40
+0000088080808000 40
+# enter 4 -> 44__
+0004088080808000 40
+0000088080808000 40
+# enter 4 -> 444_
+0004088080808000 40
+0000088080808000 40
+# enter 4 -> 4444
+0004088080808000 40
+# confirm with +
+0200088080808000 150
+
