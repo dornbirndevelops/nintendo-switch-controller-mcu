@@ -1,0 +1,7 @@
+# setup
+
+# loop
+# attempt to enter current raid
+0004088080808000 40
+# refresh list of raids to enter raid of interest asap
+0008088080808000 40
