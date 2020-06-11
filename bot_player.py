@@ -49,6 +49,7 @@ class BotPlayer(object):
             sleep(duration / 1000)
 
     def play(self, number):
+        input('start the inputs')
         self._setup()
 
         while number == 0:
