@@ -1,0 +1,65 @@
+# have the glitch active
+# be ingame in a pokemon center
+# calculate the right amount of day skips needed (depends on the active month)
+# every month reset iteration does not count a skip
+# setup -> go to date and time
+# open home menu
+1000088080808000 40
+# wait for home menu to open
+0000088080808000 400
+# from paused game to news
+00000880ff808000 40
+# from news over shop, gallery, controller to settings
+000008ff80808000 500
+# open settings
+0004088080808000 40
+# all the way down
+00000880ff808000 2000
+# open submenu
+0004088080808000 40
+# from system update over nickname, language, region to date and time
+00000880ff808080 700
+# open subsubmenu
+0004088080808000 40
+# from synchronization over timezone to date and time
+00000880ff808000 600
+
+# open time setting
+0004088080808000 40
+# wait for dialog to open
+0000088080808000 500
+# from ok to minute
+0000080080808000 40
+0000088080808080 40
+# from minute to hour
+0000080080808000 40
+0000088080808000 40
+# from hour to year
+0000080080808000 40
+0000088080808000 40
+# from year to month
+0000080080808000 40
+0000088080808000 40
+# from month to day
+0000080080808000 40
+# advance one day
+0000088000808000 40
+# from day to month
+000008ff80808000 40
+0000088080808000 40
+# from month to year
+000008ff80808000 40
+0000088080808000 40
+# from year to hour
+000008ff80808000 40
+0000088080808000 40
+# from hour to minute
+000008ff80808000 40
+0000088080808000 40
+# from minute to ok
+000008ff80808000 40
+# confirm
+0004088080808000 40
+# wait for dialog to close
+0000088080808000 500
+
