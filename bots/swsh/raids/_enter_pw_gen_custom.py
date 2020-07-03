@@ -1,14 +1,6 @@
-# generate bot script inputs for joining a sword and shield raid
-# for a given password
+# generate bot script command inputs for joining a sword and shield raid for a given password
+# commands are written to stdout
 
-# create a file with a name indicating the current password combination
-
-# then, write a series of start commands, which moves the bot to the position where
-# the raid password is prompted.
-
-# then enter the password according to the current combination
-
-# finally enter the confirm command which submits the entered password
 from argparse import ArgumentParser
 
 # creating a parser
@@ -16,7 +8,7 @@ parser = ArgumentParser(
     description='create a raid enter password script'
 )
 
-#adding arguments
+# adding arguments
 parser.add_argument(
     "--password", "-p",
     dest="password",
@@ -25,8 +17,6 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-
-filename_prefix = 'enter_pw'
 
 n = ''
 w = '''0000088080808000 40
@@ -313,13 +303,13 @@ def move(pos, target, combination_idx):
 
 combination = args.password
 pos = 1
-with open('{}_{}'.format(filename_prefix, combination), 'w') as file:
-    file.write(commands_before)
-    for j in range(len(combination)):
-        target = int(combination[j])
-        file.write('# from {} to {}\n'.format(pos, target))
-        file.write(move(pos, target, j))
-        pos = target
-        file.write('# enter {} -> {}\n'.format(target, combination[:j+1]))
-        file.write(e)
-    file.write(commands_after)
+
+print(commands_before)
+for j in range(len(combination)):
+    target = int(combination[j])
+    print('# from {} to {}\n'.format(pos, target))
+    print(move(pos, target, j))
+    pos = target
+    print('# enter {} -> {}\n'.format(target, combination[:j+1]))
+    print(e)
+    print(commands_after)
