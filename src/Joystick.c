@@ -76,8 +76,9 @@ int main(void) {
     {
         if (Serial_IsCharReceived()) {
             c = Serial_ReceiveByte();
+            AS_Serial_SendString("received string:\n");
             Serial_SendByte(c);
-            _delay_ms(100);
+            Serial_SendByte('\n');
         }
 
         // We need to run our task to process and deliver data for our IN and OUT endpoints.
@@ -108,6 +109,7 @@ void SetupHardware(void) {
     #endif
     // The USB stack should be initialized last.
     Serial_Init(9600, 0);
+    AS_Serial_SendString("hello world\n");
     USB_Init();
 }
 
@@ -232,14 +234,12 @@ void GetNextReport(USB_JoystickReport_Input_t* const ReportData, uint8_t c) {
         case SYNC_POSITION:
             bufindex = 0;
 
-
             ReportData->Button = 0;
             ReportData->LX = STICK_CENTER;
             ReportData->LY = STICK_CENTER;
             ReportData->RX = STICK_CENTER;
             ReportData->RY = STICK_CENTER;
             ReportData->HAT = HAT_CENTER;
-
 
             state = BREATHE;
             break;
