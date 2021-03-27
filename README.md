@@ -1,145 +1,92 @@
-# Nintendo Switch Controller Arduino
+# nintendo switch controller arduino
 
-control your Nintendo Switch using an Arduino UNO R3
+control your Nintendo Switch using a pro micro
 
-## Requirements
+## requirements
 
-- Arduino Uno (R3)
-- Tiny jumper cable (female female) to flash intermediate device chip
-- USB cable
-- Linux System like Ubuntu (Debian)
+- [pro micro] (or compatible)
+- [ftdi usb to uart] (or other uart device)
+- usb cables (the pro micro uses [micro usb], the ftdi uses [mini usb])
+- wires
 
-## Installation
+[pro micro]: https://amzn.to/3rpb36r
+[ftdi usb to uart]: https://amzn.to/39jvxau
+[micro usb]: https://amzn.to/2NVK4ll
+[mini usb]: https://amzn.to/3w2rWaB
 
-### 1. clone repository
+## installation
 
-```
-git clone --recursive git@github.com:dornbirndevelops/nintendo-switch-controller-arduino.git
-```
-
-### 2. install required packages
-
-- AVR Compiler
-- DFU Programmer (called FLIP on Windows):
-
-```
+```bash
 sudo apt install gcc-avr avr-libc dfu-programmer
 ```
 
-### 3. Build Flash (.hex) files for Arduino UNO R3 (atmega16u2)
+## assembly
+
+the assembly is fairly straightforward, here is a rough diagram of the parts
+and how they will be hooked up when operating
 
 ```
-make
-```
-
-## Flash
-
-**IMPORTANT FOR NOTEBOOK USERS: [turn off autosuspend](https://unix.stackexchange.com/questions/91027/how-to-disable-usb-autosuspend-on-kernel-3-7-10-or-above) before flashing because dfu-programmer does not recognize your device otherwise. this change can be reverted afterwards.**
-
-1. connect the Arduino UNO via USB Cable to your computer
-
-2. verify that the Arduino gets discovered
-
-```
-lsusb
-# Bus 001 Device 004: ID 2341:0043 Arduino SA Uno R3 (CDC ACM)
-```
-
-3. connect RESET to GND like in the image below **for about 1 second**:
-
-![wiring](https://www.arduino.cc/en/uploads/Hacking/Uno-front-DFU-reset.png)
-
-4. verify that the Arduino is now in DFU mode
+                         [your computer]
+                            |
+        +=============+     |
+        |  (ftdi)     |-----+ (usb mini cable)
+        |    tx rx    |
+        +====-==-=====|
+             |  |
+             |  |  wires (note: tx matches with rx (crossed))
+             |  |
+    +========-==-===+
+    |        rx tx  |-------------+  (usb micro cable)
+    | (pro micro)   |             |
+    +===============+        [nintendo switch]
 
 ```
-lsusb
-# Bus 001 Device 005: ID 03eb:2fef Atmel Corp.
+
+## building
+
+```bash
+make MCU=atmega32u4
 ```
 
-5. decide, which .hex-file you want to flash onto your atmega16u2, few examples are below:
+use the appropriate `MCU` for your board, the pro micro uses `atmega32u4`
 
-**default firmware**
+## flashing
 
-```
-sudo dfu-programmer atmega16u2 erase
-sudo dfu-programmer atmega16u2 flash firmwares/Arduino-usbserial-atmega16u2-Uno-Rev3.hex
-sudo dfu-programmer atmega16u2 reset
-```
+you have to be quick with this!
 
-**spam-a** (just press a all the time in game)
+- connect the pro micro to your computer
+- short `rst` to `gnd` twice in quick succession
 
-```
-sudo dfu-programmer atmega16u2 erase
-sudo dfu-programmer atmega16u2 flash spam-a.hex
-sudo dfu-programmer atmega16u2 reset
+```bash
+sudo avrdude -v -patmega32u4 -cavr109 -P/dev/ttyACM0 -Uflash:w:output.hex
 ```
 
-**any other firmware**
+use the appropriate `MCU` and serial port for your board, the pro micro uses
+`atmega32u4` and `/dev/ttyACM0`
+
+## usage
+
+to use the controller:
+- start the game you want to play
+- press home
+- navigate to controllers
+- change order/grip
+- at this point, connect the controller (it should register itself and start
+  the game)
+
+at this point, you can control the controller using uart
+
+commands are single-byte ascii characters sent over 9600 baud serial.
+
+this is the current list of commands:
 
 ```
-sudo dfu-programmer atmega16u2 erase
-sudo dfu-programmer atmega16u2 flash path/to/firmware.hex
-sudo dfu-programmer atmega16u2 reset
+0 - empty state (no buttons pressed)
+A - A is pressed
+B - B is pressed
 ```
 
-6. disconnect arduino from computer
-
-## Usage
-
-### Repeat A `spam-a.hex`
-
-_spam-a just spams the A button. You can use it to farm Fossils at the Digging Duo and/or hunting Shiny (default) Fossils at Route 6_
-
-1. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-2. plug in the Arduino UNO R3
-
-### Watts Farm `wattsfarmer.hex`
-
-1. walk to a den and throw an Wishing Piece in it
-2. use the date spoofing exploit until the den glows red (don't go in yet!)
-3. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-4. plug in the Arduino UNO R3
-
-#### Masterballs `masterballs.hex`
-
-_This uses the new VS date spamming exploit, look it up on youtube._
-
-1. Enable the VS date spam exploit
-2. go into a Pokécenter right in front of the computer
-3. make sure you can play the lottery today (do not play yet)
-4. set you switch clock settigns to manual mode
-5. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-6. plug in the Arduino UNO R3
-
-### Shiny breeding `wildareabreeding.hex` (NOT FULLY TESTED)
-
-- open wildareabreeding.c in src folder
-- change value at line 62 `#define cycles`to correct amount and save
-
-1. fly to the daycare in the wild area
-2. your party needs to be full and in the first slot should be a Pokémon with the **Flame Body** ability
-3. selection in menu needs to hover the map button
-4. exit the menu
-5. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-6. plug in the Arduino UNO R3
-
-### Farm Dracovish `dracovish.hex`
-
-_make sure you have plenty of fossils in your inventory_
-
-1. place yourself in front of the fossil lady.
-2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-3. plug in the Arduino UNO R3
-
-### Release a full box of Pokémon `releasebox.hex`
-
-_be careful using this_
-
-1. open the box you want to release
-2. go into the **Change Grip/Order** window on your Switch Homescreen and press nothing
-3. plug in the Arduino UNO R3
-
-## Thanks
+## thanks
 
 Thanks to Shiny Quagsire for his [Splatoon post printer](https://github.com/shinyquagsire23/Switch-Fightstick) and progmem for his [original discovery](https://github.com/progmem/Switch-Fightstick).
 Also thanks to bertrandom for his [snowball thrower](https://github.com/bertrandom/snowball-thrower) and all the modifications.
