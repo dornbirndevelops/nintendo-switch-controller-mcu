@@ -296,7 +296,7 @@ int main(void) {
     for (;;) {
         if (Serial_IsCharReceived()) {
             c = Serial_ReceiveByte();
-            AS_Serial_SendString("received string:\n");
+            AS_Serial_SendString("recv: ");
             Serial_SendByte(c);
             Serial_SendByte('\n');
         }
