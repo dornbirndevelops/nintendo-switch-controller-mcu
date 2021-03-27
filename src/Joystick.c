@@ -2,12 +2,14 @@
 #include "Bot.h"
 #include <LUFA/Drivers/Peripheral/Serial.h>
 
-void HID_Task(uint8_t c);
-void GetNextReport(USB_JoystickReport_Input_t* const ReportData, uint8_t c);
+typedef enum {
+    SYNC_CONTROLLER,
+    BREATHE,
+    PROCESS,
+    DONE
+} State_t;
 
-const int ECHOES = 0;
-
-const __flash command INPUTS[] = {
+const __flash command STARTUP[] = {
     // Setup controller
                           { NOTHING,  250 },
     { TRIGGERS,   5 },    { NOTHING,  150 },
@@ -17,74 +19,12 @@ const __flash command INPUTS[] = {
     // Go into game
     { HOME,       5 },    { NOTHING,  250 },
     { A,          5 },    { NOTHING,  250 },
-
-    // spam A
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 },
-    { A,          5 },    { NOTHING,  5 }
 };
-
-const int INPUT_REPEAT_BEGIN = 11;
-const int INPUTS_LENGTH = sizeof(INPUTS)/sizeof(command);
+const int STARTUP_LENGTH = sizeof(STARTUP) / sizeof(command);
 
 void AS_Serial_SendString(char* s) {
     for (int i = 0; i < strlen(s); i += 1) {
         Serial_SendByte(s[i]);
-    }
-}
-
-// Main entry point.
-int main(void) {
-    // We'll start by performing hardware and peripheral setup.
-    SetupHardware();
-    // We'll then enable global interrupts for our use.
-    GlobalInterruptEnable();
-
-    char c = '1';
-    // Once that's done, we'll enter an infinite loop.
-    for (;;)
-    {
-        if (Serial_IsCharReceived()) {
-            c = Serial_ReceiveByte();
-            AS_Serial_SendString("received string:\n");
-            Serial_SendByte(c);
-            Serial_SendByte('\n');
-        }
-
-        // We need to run our task to process and deliver data for our IN and OUT endpoints.
-        HID_Task(c);
-        // We also need to run the main USB management task.
-        USB_USBTask();
     }
 }
 
@@ -141,230 +81,163 @@ void EVENT_USB_Device_ControlRequest(void) {
     // Not used here, it looks like we don't receive control request from the Switch.
 }
 
-// Process and deliver data from IN and OUT endpoints.
-void HID_Task(uint8_t c) {
-    // If the device isn't connected and properly configured, we can't do anything here.
+void _empty_report(USB_JoystickReport_Input_t* report) {
+    memset(report, 0, sizeof(USB_JoystickReport_Input_t));
+    report->LX = STICK_CENTER;
+    report->LY = STICK_CENTER;
+    report->RX = STICK_CENTER;
+    report->RY = STICK_CENTER;
+    report->HAT = HAT_CENTER;
+}
+
+void GetNextReport_startup(
+    USB_JoystickReport_Input_t* report,
+    State_t* state,
+    int* index,
+    int* duration
+) {
+    _empty_report(report);
+
+    switch (*state) {
+        case SYNC_CONTROLLER:
+            *state = BREATHE;
+            break;
+
+        case BREATHE:
+            *state = PROCESS;
+            break;
+
+        case PROCESS:
+            switch (STARTUP[*index].button) {
+                case A:
+                    report->Button |= SWITCH_A;
+                    break;
+                case HOME:
+                    report->Button |= SWITCH_HOME;
+                    break;
+                case TRIGGERS:
+                    report->Button |= SWITCH_L | SWITCH_R;
+                    break;
+                default:
+                    report->LX = STICK_CENTER;
+                    report->LY = STICK_CENTER;
+                    report->RX = STICK_CENTER;
+                    report->RY = STICK_CENTER;
+                    report->HAT = HAT_CENTER;
+                    break;
+            }
+
+            *duration += 1;
+
+            if (*duration > STARTUP[*index].duration) {
+                *index += 1;
+                *duration = 0;
+            }
+
+            if (*index >= STARTUP_LENGTH) {
+                *state = DONE;
+
+                report->LX = STICK_CENTER;
+                report->LY = STICK_CENTER;
+                report->RX = STICK_CENTER;
+                report->RY = STICK_CENTER;
+                report->HAT = HAT_CENTER;
+
+                return;
+            }
+
+            break;
+
+        case DONE:
+            break;
+    }
+}
+
+void HID_Task_startup(State_t* state, int* index, int* duration) {
     if (USB_DeviceState != DEVICE_STATE_Configured)
         return;
 
-    // We'll start with the OUT endpoint.
     Endpoint_SelectEndpoint(JOYSTICK_OUT_EPADDR);
-    // We'll check to see if we received something on the OUT endpoint.
-    if (Endpoint_IsOUTReceived())
-    {
-        // If we did, and the packet has data, we'll react to it.
-        if (Endpoint_IsReadWriteAllowed())
-        {
-            // We'll create a place to store our data received from the host.
+    if (Endpoint_IsOUTReceived()) {
+        if (Endpoint_IsReadWriteAllowed()) {
             USB_JoystickReport_Output_t JoystickOutputData;
-            // We'll then take in that data, setting it up in our storage.
             while(Endpoint_Read_Stream_LE(&JoystickOutputData, sizeof(JoystickOutputData), NULL) != ENDPOINT_RWSTREAM_NoError);
-            // At this point, we can react to this data.
-
-            // However, since we're not doing anything with this data, we abandon it.
         }
-        // Regardless of whether we reacted to the data, we acknowledge an OUT packet on this endpoint.
         Endpoint_ClearOUT();
     }
 
-    // We'll then move on to the IN endpoint.
     Endpoint_SelectEndpoint(JOYSTICK_IN_EPADDR);
-    // We first check to see if the host is ready to accept data.
-    if (Endpoint_IsINReady())
-    {
-        // We'll create an empty report.
+    if (Endpoint_IsINReady()) {
         USB_JoystickReport_Input_t JoystickInputData;
-        // We'll then populate this report with what we want to send to the host.
-        GetNextReport(&JoystickInputData, c);
-        // Once populated, we can output this data to the host. We do this by first writing the data to the control stream.
+        GetNextReport_startup(&JoystickInputData, state, index, duration);
         while(Endpoint_Write_Stream_LE(&JoystickInputData, sizeof(JoystickInputData), NULL) != ENDPOINT_RWSTREAM_NoError);
-        // We then send an IN packet on this endpoint.
         Endpoint_ClearIN();
     }
 }
 
-typedef enum {
-    SYNC_CONTROLLER,
-    SYNC_POSITION,
-    BREATHE,
-    PROCESS,
-    CLEANUP,
-    DONE
-} State_t;
-State_t state = SYNC_CONTROLLER;
+void GetNextReport(USB_JoystickReport_Input_t* report, uint8_t c) {
+    _empty_report(report);
 
-int echoes = 0;
-USB_JoystickReport_Input_t last_report;
+    switch (c) {
+        case '0':
+            break;
 
-int bufindex = 0;
-int duration_count = 0;
-int portsval = 0;
+        case 'A':
+            report->Button |= SWITCH_A;
+            break;
 
-// Prepare the next report for the host.
-void GetNextReport(USB_JoystickReport_Input_t* const ReportData, uint8_t c) {
+        case 'B':
+            report->Button |= SWITCH_B;
+            break;
+    }
+}
 
-    // Prepare an empty report
-    memset(ReportData, 0, sizeof(USB_JoystickReport_Input_t));
-    ReportData->LX = STICK_CENTER;
-    ReportData->LY = STICK_CENTER;
-    ReportData->RX = STICK_CENTER;
-    ReportData->RY = STICK_CENTER;
-    ReportData->HAT = HAT_CENTER;
-
-    if (c == '0') {
+void HID_Task(uint8_t c) {
+    if (USB_DeviceState != DEVICE_STATE_Configured)
         return;
+
+    Endpoint_SelectEndpoint(JOYSTICK_OUT_EPADDR);
+    if (Endpoint_IsOUTReceived()) {
+        if (Endpoint_IsReadWriteAllowed()) {
+            USB_JoystickReport_Output_t JoystickOutputData;
+            while(Endpoint_Read_Stream_LE(&JoystickOutputData, sizeof(JoystickOutputData), NULL) != ENDPOINT_RWSTREAM_NoError);
+        }
+        Endpoint_ClearOUT();
     }
 
-    // Repeat ECHOES times the last report
-    if (echoes > 0)
-    {
-        memcpy(ReportData, &last_report, sizeof(USB_JoystickReport_Input_t));
-        echoes--;
-        return;
+    Endpoint_SelectEndpoint(JOYSTICK_IN_EPADDR);
+    if (Endpoint_IsINReady()) {
+        USB_JoystickReport_Input_t JoystickInputData;
+        GetNextReport(&JoystickInputData, c);
+        while(Endpoint_Write_Stream_LE(&JoystickInputData, sizeof(JoystickInputData), NULL) != ENDPOINT_RWSTREAM_NoError);
+        Endpoint_ClearIN();
+    }
+}
+
+int main(void) {
+    SetupHardware();
+    GlobalInterruptEnable();
+
+    // perform startup task first (to enter the game)
+    State_t state = SYNC_CONTROLLER;
+    int index = 0;
+    int duration = 0;
+    while (state != DONE) {
+        HID_Task_startup(&state, &index, &duration);
+        USB_USBTask();
     }
 
-    // States and moves management
-    switch (state)
-    {
+    // listen for inputs and react
+    char c = '0';
+    for (;;) {
+        if (Serial_IsCharReceived()) {
+            c = Serial_ReceiveByte();
+            AS_Serial_SendString("received string:\n");
+            Serial_SendByte(c);
+            Serial_SendByte('\n');
+        }
 
-        case SYNC_CONTROLLER:
-            state = BREATHE;
-            break;
-
-        case SYNC_POSITION:
-            bufindex = 0;
-
-            ReportData->Button = 0;
-            ReportData->LX = STICK_CENTER;
-            ReportData->LY = STICK_CENTER;
-            ReportData->RX = STICK_CENTER;
-            ReportData->RY = STICK_CENTER;
-            ReportData->HAT = HAT_CENTER;
-
-            state = BREATHE;
-            break;
-
-        case BREATHE:
-            state = PROCESS;
-            break;
-
-        case PROCESS:
-
-            switch (INPUTS[bufindex].button)
-            {
-
-                case UP:
-                    ReportData->LY = STICK_MIN;
-                    break;
-
-                case LEFT:
-                    ReportData->LX = STICK_MIN;
-                    break;
-
-                case DOWN:
-                    ReportData->LY = STICK_MAX;
-                    break;
-
-                case RIGHT:
-                    ReportData->LX = STICK_MAX;
-                    break;
-
-                case SPIN:
-                    ReportData->RX = STICK_MIN;
-                    ReportData->LX = STICK_MIN;
-                    break;
-
-                case POSITION:
-                    ReportData->LY = STICK_MIN;
-                    ReportData->LX = STICK_MAX;
-                    break;
-
-                case A:
-                    ReportData->Button |= SWITCH_A;
-                    break;
-
-                case B:
-                    ReportData->Button |= SWITCH_B;
-                    break;
-
-                case R:
-                    ReportData->Button |= SWITCH_R;
-                    break;
-
-                case X:
-                    ReportData->Button |= SWITCH_X;
-                    break;
-
-                case Y:
-                    ReportData->Button |= SWITCH_Y;
-                    break;
-
-                case PLUS:
-                    ReportData->Button |= SWITCH_PLUS;
-                    break;
-
-                case MINUS:
-                    ReportData->Button |= SWITCH_MINUS;
-                    break;
-
-                case HOME:
-                    ReportData->Button |= SWITCH_HOME;
-                    break;
-
-                case TRIGGERS:
-                    ReportData->Button |= SWITCH_L | SWITCH_R;
-                    break;
-
-                default:
-                    ReportData->LX = STICK_CENTER;
-                    ReportData->LY = STICK_CENTER;
-                    ReportData->RX = STICK_CENTER;
-                    ReportData->RY = STICK_CENTER;
-                    ReportData->HAT = HAT_CENTER;
-                    break;
-            }
-
-            duration_count++;
-
-            if (duration_count > INPUTS[bufindex].duration)
-            {
-                bufindex++;
-                duration_count = 0;
-            }
-
-
-            if (bufindex > INPUTS_LENGTH - 1)
-            {
-                bufindex = INPUT_REPEAT_BEGIN;
-                duration_count = 0;
-
-                state = BREATHE;
-
-                ReportData->LX = STICK_CENTER;
-                ReportData->LY = STICK_CENTER;
-                ReportData->RX = STICK_CENTER;
-                ReportData->RY = STICK_CENTER;
-                ReportData->HAT = HAT_CENTER;
-            }
-
-            break;
-
-        case CLEANUP:
-            state = DONE;
-            break;
-
-        case DONE:
-            #ifdef ALERT_WHEN_DONE
-            portsval = ~portsval;
-            PORTD = portsval; //flash LED(s) and sound buzzer if attached
-            PORTB = portsval;
-            _delay_ms(250);
-            #endif
-            return;
+        HID_Task(c);
+        USB_USBTask();
     }
-
-    // Prepare to echo this report
-    memcpy(&last_report, ReportData, sizeof(USB_JoystickReport_Input_t));
-    echoes = ECHOES;
-
 }

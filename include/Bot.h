@@ -28,9 +28,4 @@ typedef struct {
     uint16_t duration;
 } command;
 
-extern const __flash command INPUTS[];
-extern const int INPUTS_LENGTH;
-extern const int INPUT_REPEAT_BEGIN;
-extern const int ECHOES;
-
 #endif
