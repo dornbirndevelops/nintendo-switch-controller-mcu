@@ -81,9 +81,16 @@ commands are single-byte ascii characters sent over 9600 baud serial.
 this is the current list of commands:
 
 ```
-0 - empty state (no buttons pressed)
-A - A is pressed
-B - B is pressed
+0: empty state (no buttons pressed)
+A: A is pressed
+B: B is pressed
+X: X is pressed
+Y: Y is pressed
+H: Home is pressed
++: + is pressed
+-: - is pressed
+L: left trigger is pressed
+R: right trigger is pressed
 ```
 
 ## thanks

@@ -189,6 +189,34 @@ void GetNextReport(USB_JoystickReport_Input_t* report, uint8_t c) {
         case 'B':
             report->Button |= SWITCH_B;
             break;
+
+        case 'X':
+            report->Button |= SWITCH_X;
+            break;
+
+        case 'Y':
+            report->Button |= SWITCH_Y;
+            break;
+
+        case 'H':
+            report->Button |= SWITCH_HOME;
+            break;
+
+        case '+':
+            report->Button |= SWITCH_PLUS;
+            break;
+
+        case '-':
+            report->Button |= SWITCH_MINUS;
+            break;
+
+        case 'L':
+            report->Button |= SWITCH_L;
+            break;
+
+        case 'R':
+            report->Button |= SWITCH_R;
+            break;
     }
 }
 
