@@ -31,7 +31,7 @@ and how they will be hooked up when operating
         +=============+     |
         |  (ftdi)     |-----+ (usb mini cable)
         |    tx rx    |
-        +====-==-=====|
+        +====-==-=====+
              |  |
              |  |  wires (note: tx matches with rx (crossed))
              |  |
