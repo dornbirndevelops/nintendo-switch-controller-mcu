@@ -49,7 +49,7 @@ void SetupHardware(void) {
     #endif
     // The USB stack should be initialized last.
     Serial_Init(9600, 0);
-    AS_Serial_SendString("hello world\n");
+    AS_Serial_SendString("hello hello world\n");
     USB_Init();
 }
 
