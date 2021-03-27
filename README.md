@@ -91,6 +91,16 @@ H: Home is pressed
 -: - is pressed
 L: left trigger is pressed
 R: right trigger is pressed
+
+directions:
+
+      w
+   q     e
+      ║
+a  ═══╬═══  d
+      ║
+   z     c
+      s
 ```
 
 ## thanks

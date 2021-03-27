@@ -217,6 +217,42 @@ void GetNextReport(USB_JoystickReport_Input_t* report, uint8_t c) {
         case 'R':
             report->Button |= SWITCH_R;
             break;
+
+        case 'w':
+            report->LY = STICK_MIN;
+            break;
+
+        case 'a':
+            report->LX = STICK_MIN;
+            break;
+
+        case 's':
+            report->LY = STICK_MAX;
+            break;
+
+        case 'd':
+            report->LX = STICK_MAX;
+            break;
+
+        case 'q':
+            report->LY = STICK_MIN;
+            report->LX = STICK_MIN;
+            break;
+
+        case 'e':
+            report->LY = STICK_MIN;
+            report->LX = STICK_MAX;
+            break;
+
+        case 'z':
+            report->LY = STICK_MAX;
+            report->LX = STICK_MIN;
+            break;
+
+        case 'c':
+            report->LY = STICK_MAX;
+            report->LX = STICK_MAX;
+            break;
     }
 }
 
