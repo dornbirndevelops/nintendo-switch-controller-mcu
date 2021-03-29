@@ -292,13 +292,25 @@ int main(void) {
     }
 
     // listen for inputs and react
+    bool verbose = false;
     char c = '0';
     for (;;) {
         if (Serial_IsCharReceived()) {
-            c = Serial_ReceiveByte();
-            AS_Serial_SendString("recv: ");
-            Serial_SendByte(c);
-            Serial_SendByte('\n');
+            char read = Serial_ReceiveByte();
+            if (read == 'V') {
+                verbose = true;
+                AS_Serial_SendString("enabling verbose mode\n");
+            } else if (read == 'v') {
+                verbose = false;
+                AS_Serial_SendString("disabling verbose mode\n");
+            } else {
+                c = read;
+                if (verbose) {
+                    AS_Serial_SendString("recv: ");
+                    Serial_SendByte(c);
+                    Serial_SendByte('\n');
+                }
+            }
         }
 
         HID_Task(c);

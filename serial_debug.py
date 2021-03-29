@@ -5,6 +5,7 @@ import sys
 
 def main():
     with serial.Serial(sys.argv[1], 9600) as ser:
+        ser.write(b'V')
         while True:
             if os.path.exists('f'):
                 with open('f', 'rb') as f:

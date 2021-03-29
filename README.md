@@ -81,6 +81,9 @@ commands are single-byte ascii characters sent over 9600 baud serial.
 this is the current list of commands:
 
 ```
+V: enable verbose mode (microcontroller will reply with `revc: _`)
+v: disable verbose mode
+
 0: empty state (no buttons pressed)
 A: A is pressed
 B: B is pressed
