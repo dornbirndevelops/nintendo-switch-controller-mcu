@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import os.path
-import serial
 import sys
+
+import serial
 
 
 def main():

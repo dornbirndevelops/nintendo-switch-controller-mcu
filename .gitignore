@@ -1,11 +1,11 @@
-.DS_Store
-*.d
-*.o
 *.bin
+*.d
+*.eep
 *.elf
 *.hex
 *.lss
 *.map
+*.o
+*.pyc
 *.sym
-*.eep
 LUFA/
