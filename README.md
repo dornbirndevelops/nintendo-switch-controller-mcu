@@ -33,10 +33,12 @@ and how they will be hooked up when operating
         |    tx rx    |
         +====-==-=====+
              |  |
-             |  |  wires (note: tx matches with rx (crossed))
-             |  |
-    +========-==-===+
-    |        rx tx  |-------------+  (usb micro cable)
+ +======+    |  |
+ |buzzer|    |  |
+ +======+    |  |  wires (note: tx matches with rx (crossed))
+     |  |    |  |
+    +-==-====-==-===+
+    |9  gnd  rx tx  |-------------+  (usb micro cable)
     | (pro micro)   |             |
     +===============+        [nintendo switch]
 
@@ -83,6 +85,9 @@ this is the current list of commands:
 ```
 V: enable verbose mode (microcontroller will reply with `revc: _`)
 v: disable verbose mode
+
+!: enable output on pin 9 (buzzer)
+.: disable output on pin 9
 
 0: empty state (no buttons pressed)
 A: A is pressed
