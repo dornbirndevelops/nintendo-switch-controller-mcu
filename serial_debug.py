@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import argparse
 import os.path
 import sys
 
 import serial
 
 
-def main():
-    with serial.Serial(sys.argv[1], 9600) as ser:
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--serial', default='/dev/ttyUSB0')
+    args = parser.parse_args()
+
+    with serial.Serial(args.serial, 9600) as ser:
         ser.write(b'V')
         while True:
             if os.path.exists('f'):
@@ -22,6 +27,7 @@ def main():
             elif ser.in_waiting:
                 sys.stdout.buffer.write(ser.read())
                 sys.stdout.buffer.flush()
+    return 0
 
 
 if __name__ == '__main__':
