@@ -34,7 +34,8 @@ def main() -> int:
     assert args.fossil == 'dracozolt', f'{args.fossil} not yet implemented'
 
     with serial.Serial(args.serial, 9600) as ser:
-        for _ in range(args.count):
+        for i in range(args.count):
+            print(f'reviving fossil #{i + 1}')
             _press(ser, 'A')
             time.sleep(1)
             _press(ser, 'A')
