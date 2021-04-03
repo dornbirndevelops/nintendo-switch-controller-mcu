@@ -26,21 +26,21 @@ the assembly is fairly straightforward, here is a rough diagram of the parts
 and how they will be hooked up when operating
 
 ```
-                         [your computer]
-                            |
-        +=============+     |
-        |  (ftdi)     |-----+ (usb mini cable)
-        |    tx rx    |
-        +====-==-=====+
-             |  |
- +======+    |  |
- |buzzer|    |  |
- +======+    |  |  wires (note: tx matches with rx (crossed))
-     |  |    |  |
-    +-==-====-==-===+
-    |9  gnd  rx tx  |-------------+  (usb micro cable)
-    | (pro micro)   |             |
-    +===============+        [nintendo switch]
+                           [your computer]
+                               |
+          +==============+     |
+          |    (ftdi)    |-----+ (usb mini cable)
+          | 5v gnd tx rx |
+          +=-===-===-==-=+
+            |   |   |  |
+ +======+   |   |   |  |
+ |buzzer|   |   |   |  |
+ +======+   |   |   |  |  wires (note: tx matches with rx (crossed))
+     |  |   |   |   |  |
+    +-==-===-===-===-==-==+
+    |9  gnd vcc gnd rx tx |-------------+  (usb micro cable)
+    |     (pro micro)     |             |
+    +=====================+        [nintendo switch]
 
 ```
 
