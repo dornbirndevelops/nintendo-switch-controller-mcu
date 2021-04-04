@@ -22,16 +22,14 @@ def _beep(ser: serial.Serial) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--fossil',
-        choices=('dracozolt', 'arctofish', 'arctozolt', 'dracovish'),
-        required=True,
-    )
+    parser.add_argument('--part1', choices=('top', 'bottom'), required=True)
+    parser.add_argument('--part2', choices=('top', 'bottom'), required=True)
     parser.add_argument('--count', type=int, default=1)
     parser.add_argument('--serial', default='/dev/ttyUSB0')
     args = parser.parse_args()
 
-    assert args.fossil == 'dracozolt', f'{args.fossil} not yet implemented'
+    assert args.part1 == 'top', f'{args.part1} not yet implemented'
+    assert args.part2 == 'top', f'{args.part2} not yet implemented'
 
     with serial.Serial(args.serial, 9600) as ser:
         for i in range(args.count):
