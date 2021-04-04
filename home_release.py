@@ -94,6 +94,7 @@ def main() -> int:
     parser.add_argument('box_count', type=int)
     parser.add_argument('--offset', type=int, default=0)
     parser.add_argument('--serial', default='/dev/ttyUSB0')
+    parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
 
     todo = args.box_count - args.offset
@@ -106,7 +107,11 @@ def main() -> int:
             else:
                 box_n = todo
 
-            _release(ser, offset, box_n)
+            if args.dry_run:
+                for i in range(offset, offset + box_n):
+                    print(f'would release box {i + 1}')
+            else:
+                _release(ser, offset, box_n)
             todo -= box_n
             offset += box_n
 
