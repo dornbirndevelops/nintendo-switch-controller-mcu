@@ -99,6 +99,8 @@ H: Home is pressed
 -: - is pressed
 L: left trigger is pressed
 R: right trigger is pressed
+l: ZL is pressed
+r: ZR is pressed
 
 directions:
 

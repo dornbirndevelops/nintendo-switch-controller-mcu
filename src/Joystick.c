@@ -213,6 +213,14 @@ void GetNextReport(USB_JoystickReport_Input_t* report, uint8_t c) {
             report->Button |= SWITCH_R;
             break;
 
+        case 'l':
+            report->Button |= SWITCH_ZL;
+            break;
+
+        case 'r':
+            report->Button |= SWITCH_ZR;
+            break;
+
         case 'w':
             report->LY = STICK_MIN;
             break;
