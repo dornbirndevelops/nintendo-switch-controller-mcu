@@ -34,7 +34,7 @@ def main() -> int:
                 _press(ser, 'A')
 
         print('backing out')
-        end = time.time() + 15
+        end = time.time() + 5
         while time.time() < end:
             _press(ser, 'B')
 
