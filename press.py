@@ -19,7 +19,7 @@ def main() -> int:
             ser.write(args.key.encode())
             time.sleep(args.duration)
             ser.write(b'0')
-            time.sleep(args.duration)
+            time.sleep(.05)
     return 0
 
 
