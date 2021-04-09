@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import time
+from typing import Generator
 
 import cv2
 import numpy
@@ -9,6 +11,7 @@ import serial
 
 
 def _press(ser: serial.Serial, s: str, duration: float = .1) -> None:
+    print(f'{s=} {duration=}')
     ser.write(s.encode())
     time.sleep(duration)
     ser.write(b'0')
@@ -29,6 +32,56 @@ def _wait_and_render(vid: cv2.VideoCapture, t: float) -> None:
         _getframe(vid)
 
 
+def _alarm(ser: serial.Serial, vid: cv2.VideoCapture) -> None:
+    while True:
+        ser.write(b'!')
+        _wait_and_render(vid, .5)
+        ser.write(b'.')
+        _wait_and_render(vid, .5)
+
+
+def _await_pixel(
+        ser: serial.Serial,
+        vid: cv2.VideoCapture,
+        *,
+        x: int,
+        y: int,
+        pixel: tuple[int, int, int],
+        timeout: float = 90,
+) -> None:
+    end = time.time() + timeout
+    frame = _getframe(vid)
+    while not numpy.array_equal(frame[y][x], pixel):
+        frame = _getframe(vid)
+        if time.time() > end:
+            _alarm(ser, vid)
+
+
+def _await_not_pixel(
+        ser: serial.Serial,
+        vid: cv2.VideoCapture,
+        *,
+        x: int,
+        y: int,
+        pixel: tuple[int, int, int],
+        timeout: float = 90,
+) -> None:
+    end = time.time() + timeout
+    frame = _getframe(vid)
+    while numpy.array_equal(frame[y][x], pixel):
+        frame = _getframe(vid)
+        if time.time() > end:
+            _alarm(ser, vid)
+
+
+@contextlib.contextmanager
+def _shh(ser: serial.Serial) -> Generator[None, None, None]:
+    try:
+        yield
+    finally:
+        ser.write(b'.')
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default='/dev/ttyUSB0')
@@ -38,7 +91,7 @@ def main() -> int:
     vid.set(cv2.CAP_PROP_FRAME_WIDTH, 768)
     vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-    with serial.Serial(args.serial, 9600) as ser:
+    with serial.Serial(args.serial, 9600) as ser, _shh(ser):
         while True:
             _press(ser, 'H')
             _wait_and_render(vid, 1)
@@ -51,27 +104,18 @@ def main() -> int:
             _wait_and_render(vid, 1)
             _press(ser, 'A')
 
-            frame = _getframe(vid)
-            while not numpy.array_equal(frame[5][5], [16, 16, 16]):
-                frame = _getframe(vid)
+            _await_pixel(ser, vid, x=5, y=5, pixel=(16, 16, 16))
 
             print('startup screen!')
 
-            frame = _getframe(vid)
-            while numpy.array_equal(frame[5][5], [16, 16, 16]):
-                frame = _getframe(vid)
+            _await_not_pixel(ser, vid, x=5, y=5, pixel=(16, 16, 16))
 
             print('after startup!')
             _wait_and_render(vid, .5)
             _press(ser, 'A')
 
-            frame = _getframe(vid)
-            while not numpy.array_equal(frame[5][5], [16, 16, 16]):
-                frame = _getframe(vid)
-
-            frame = _getframe(vid)
-            while numpy.array_equal(frame[5][5], [16, 16, 16]):
-                frame = _getframe(vid)
+            _await_pixel(ser, vid, x=5, y=5, pixel=(16, 16, 16))
+            _await_not_pixel(ser, vid, x=5, y=5, pixel=(16, 16, 16))
 
             print('game loaded')
             _wait_and_render(vid, .5)
@@ -81,35 +125,23 @@ def main() -> int:
             _wait_and_render(vid, .75)
             _press(ser, 'A')
 
-            frame = _getframe(vid)
-            while not numpy.array_equal(frame[420][696], [59, 59, 59]):
-                frame = _getframe(vid)
+            _await_pixel(ser, vid, x=696, y=420, pixel=(59, 59, 59))
 
             print('dialog started')
 
-            frame = _getframe(vid)
-            while numpy.array_equal(frame[420][696], [59, 59, 59]):
-                frame = _getframe(vid)
+            _await_not_pixel(ser, vid, x=696, y=420, pixel=(59, 59, 59))
 
             print('dialog ended')
             t0 = time.time()
 
-            frame = _getframe(vid)
-            while not numpy.array_equal(frame[420][696], [59, 59, 59]):
-                frame = _getframe(vid)
+            _await_pixel(ser, vid, x=696, y=420, pixel=(59, 59, 59))
 
-            print('dialog second time')
             t1 = time.time()
-
             print(f'dialog delay: {t1 - t0:.3f}s')
 
             if (t1 - t0) > 1:
                 print('SHINY!!!')
-                while True:
-                    ser.write(b'!')
-                    _wait_and_render(vid, .5)
-                    ser.write(b'.')
-                    _wait_and_render(vid, .5)
+                _alarm(ser, vid)
 
     vid.release()
     cv2.destroyAllWindows()
