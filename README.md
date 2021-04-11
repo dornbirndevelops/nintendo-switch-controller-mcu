@@ -6,13 +6,12 @@ control your Nintendo Switch using a pro micro
 
 - [pro micro] (or compatible)
 - [ftdi usb to uart] (or other uart device)
-- usb cables (the pro micro uses [micro usb], the ftdi uses [mini usb])
+- usb cables (both use [micro usb])
 - wires
 
 [pro micro]: https://amzn.to/3rpb36r
-[ftdi usb to uart]: https://amzn.to/39jvxau
+[ftdi usb to uart]: https://amzn.to/3dRWML0
 [micro usb]: https://amzn.to/2NVK4ll
-[mini usb]: https://amzn.to/3w2rWaB
 
 ## installation
 
