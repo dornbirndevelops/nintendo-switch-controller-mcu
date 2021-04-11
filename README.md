@@ -44,6 +44,10 @@ and how they will be hooked up when operating
 
 ```
 
+my assembly (I have a button from rst to gnd to help flashing)
+
+![](https://user-images.githubusercontent.com/1810591/114293095-2ab8a980-9a48-11eb-9b35-290d58786701.jpg)
+
 ## building
 
 ```bash
