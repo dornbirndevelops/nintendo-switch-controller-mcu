@@ -28,7 +28,7 @@ and how they will be hooked up when operating
                         [your computer]
                             |
           +===========+     |
-          | (ftdi)    |-----+ (usb mini cable)
+          | (ftdi)    |-----+ (usb cable)
           | gnd tx rx |
           +==-===-==-=+
              |   |  |
@@ -37,7 +37,7 @@ and how they will be hooked up when operating
  +======+    |   |  |  wires (note: tx matches with rx (crossed))
      |  |    |   |  |
     +-==-====-===-==-==+
-    |9  gnd  gnd rx tx |-------------+  (usb micro cable)
+    |9  gnd  gnd rx tx |-------------+  (usb cable)
     |     (pro micro)  |             |
     +==================+        [nintendo switch]
 
