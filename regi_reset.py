@@ -111,14 +111,14 @@ def main() -> int:
             _await_not_pixel(ser, vid, x=5, y=5, pixel=(16, 16, 16))
 
             print('after startup!')
-            _wait_and_render(vid, .5)
+            _wait_and_render(vid, .75)
             _press(ser, 'A')
 
             _await_pixel(ser, vid, x=5, y=5, pixel=(16, 16, 16))
             _await_not_pixel(ser, vid, x=5, y=5, pixel=(16, 16, 16))
 
             print('game loaded')
-            _wait_and_render(vid, .5)
+            _wait_and_render(vid, .75)
             _press(ser, 'A')
             _wait_and_render(vid, .5)
             _press(ser, 'A')
