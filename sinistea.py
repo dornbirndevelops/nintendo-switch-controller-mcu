@@ -10,7 +10,7 @@ import numpy
 import serial
 
 
-def _press(ser: serial.Serial, s: str, duration: float = .1) -> None:
+def _press(ser: serial.Serial, s: str, duration: float = .05) -> None:
     print(f'{s=} {duration=}')
     ser.write(s.encode())
     time.sleep(duration)
@@ -35,9 +35,25 @@ def _wait_and_render(vid: cv2.VideoCapture, t: float) -> None:
 def _alarm(ser: serial.Serial, vid: cv2.VideoCapture) -> None:
     while True:
         ser.write(b'!')
-        _wait_and_render(vid, .5)
+        _wait_and_render(vid, .2)
         ser.write(b'.')
-        _wait_and_render(vid, .5)
+        _wait_and_render(vid, .05)
+        ser.write(b'!')
+        _wait_and_render(vid, .075)
+        ser.write(b'.')
+        _wait_and_render(vid, .075)
+        ser.write(b'!')
+        _wait_and_render(vid, .075)
+        ser.write(b'.')
+        _wait_and_render(vid, .075)
+        ser.write(b'!')
+        _wait_and_render(vid, .2)
+        ser.write(b'.')
+        _wait_and_render(vid, .075)
+        ser.write(b'!')
+        _wait_and_render(vid, .2)
+        ser.write(b'.')
+        _wait_and_render(vid, .075)
 
 
 def _await_pixel(
@@ -110,14 +126,14 @@ def main() -> int:
 
             ser.write(b'a')
             left = True
-            t_end = time.time() + .7
+            t_end = time.time() + .65
 
             frame = _getframe(vid)
             while not numpy.array_equal(frame[420][696], (59, 59, 59)):
                 if time.time() > t_end:
                     ser.write(b'd' if left else b'a')
                     left = not left
-                    t_end = time.time() + .7
+                    t_end = time.time() + .65
 
                 frame = _getframe(vid)
             ser.write(b'0')
@@ -139,6 +155,7 @@ def main() -> int:
                 _alarm(ser, vid)
 
             _await_pixel(ser, vid, x=686, y=289, pixel=(16, 16, 16))
+            _wait_and_render(vid, .05)
             _press(ser, 'w')
             _press(ser, 'A')
             _wait_and_render(vid, 4.5)
