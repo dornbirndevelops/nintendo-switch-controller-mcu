@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import sys
 import time
 from typing import Generator
 
 import cv2
 import numpy
 import serial
+
+SERIAL_DEFAULT = 'COM1' if sys.platform == 'win32' else '/dev/ttyUSB0'
 
 
 def _press(ser: serial.Serial, s: str, duration: float = .1) -> None:
@@ -84,7 +87,7 @@ def _shh(ser: serial.Serial) -> Generator[None, None, None]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--serial', default='/dev/ttyUSB0')
+    parser.add_argument('--serial', default=SERIAL_DEFAULT)
     args = parser.parse_args()
 
     vid = cv2.VideoCapture(0)

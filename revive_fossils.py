@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 
 import serial
+
+SERIAL_DEFAULT = 'COM1' if sys.platform == 'win32' else '/dev/ttyUSB0'
 
 
 def _press(ser: serial.Serial, s: str, duration: float = .05) -> None:
@@ -25,7 +28,7 @@ def main() -> int:
     parser.add_argument('--part1', choices=('top', 'bottom'), required=True)
     parser.add_argument('--part2', choices=('top', 'bottom'), required=True)
     parser.add_argument('--count', type=int, default=1)
-    parser.add_argument('--serial', default='/dev/ttyUSB0')
+    parser.add_argument('--serial', default=SERIAL_DEFAULT)
     args = parser.parse_args()
 
     assert args.part1 == 'top', f'{args.part1} not yet implemented'

@@ -3,9 +3,12 @@ from __future__ import annotations
 import argparse
 import calendar
 import datetime
+import sys
 import time
 
 import serial
+
+SERIAL_DEFAULT = 'COM1' if sys.platform == 'win32' else '/dev/ttyUSB0'
 
 
 def _press(ser: serial.Serial, s: str, duration: float = .05) -> None:
@@ -49,7 +52,7 @@ def _return_to_game_from_date_panel(ser: serial.Serial) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--date', type=datetime.date.fromisoformat)
-    parser.add_argument('--serial', default='/dev/ttyUSB0')
+    parser.add_argument('--serial', default=SERIAL_DEFAULT)
     args = parser.parse_args()
 
     current_date = args.date

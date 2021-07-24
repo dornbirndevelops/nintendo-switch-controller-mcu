@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 
 import serial
 
+SERIAL_DEFAULT = 'COM1' if sys.platform == 'win32' else '/dev/ttyUSB0'
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--serial', default='/dev/ttyUSB0')
+    parser.add_argument('--serial', default=SERIAL_DEFAULT)
     parser.add_argument('--duration', type=float, default=.05)
     parser.add_argument('--count', type=int, default=1)
     parser.add_argument('key')

@@ -6,10 +6,12 @@ import sys
 
 import serial
 
+SERIAL_DEFAULT = 'COM1' if sys.platform == 'win32' else '/dev/ttyUSB0'
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--serial', default='/dev/ttyUSB0')
+    parser.add_argument('--serial', default=SERIAL_DEFAULT)
     args = parser.parse_args()
 
     with serial.Serial(args.serial, 9600) as ser:
