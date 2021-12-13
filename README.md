@@ -16,7 +16,7 @@ control your Nintendo Switch using a pro micro
 ## installation
 
 ```bash
-sudo apt install gcc-avr avr-libc dfu-programmer
+sudo apt install avrdude gcc-avr avr-libc dfu-programmer
 ```
 
 ## assembly
