@@ -1,10 +1,11 @@
 manifest:
+  defaults:
+    remote: zephyrproject-rtos
   remotes:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
   projects:
     - name: zephyr
-      remote: zephyrproject-rtos
-      revision: v2.7.1
+      revision: 44462723f59ddcc0786af0b5406122476c2addf9
       west-commands: scripts/west-commands.yml
       import: true
