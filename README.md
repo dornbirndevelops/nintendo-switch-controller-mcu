@@ -13,7 +13,7 @@ The following sections shall help you to get the project up and running on a Lin
 
 ### root: Install OS Dependencies
 
-Please note that different distributions of Linux may have different system package managers with different package names. Therefore, here's a list of the packages needed. If you are unsure how to install and individual package on your OS, you may have a look [here](https://command-not-found.com/)
+Please note that different distributions of Linux may have different system package managers with different package names. Therefore, here's a list of the packages needed. If you are unsure how to install and individual package on your OS, you may have a look [here](https://command-not-found.com/).
 
 - `git`
 - `cmake`
