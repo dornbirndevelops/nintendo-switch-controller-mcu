@@ -7,6 +7,21 @@
 #include <zephyr.h>
 #include <sys/printk.h>
 
+#include <net/net_if.h>
+#include <net/net_core.h>
+#include <net/net_context.h>
+#include <net/net_mgmt.h>
+
+#include <esp_wifi.h>
+#include <esp_timer.h>
+#include <esp_event.h>
+
+
+// #include <net/hostname.h>
+// #include <net/if.h>>
+// #include <net/wifi.h>
+// #include <net/wifi_mgmt.h>
+
 /* routes:
 * / -> serve web frontend
 * /api/connect -> connect to switch console
@@ -20,7 +35,11 @@
 void main(void)
 {
 	printk("Hello World! %s\n", CONFIG_BOARD);
+
+	
 	// connect to WIFI
+	
+
 
 	// obtain IP address
 
