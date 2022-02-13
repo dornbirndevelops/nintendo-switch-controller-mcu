@@ -99,7 +99,7 @@ def main() -> int:
 
             filtered = frame[py:py+h, px:px+w, :] > (200, 200, 200)
             whites = numpy.apply_along_axis(all, axis=2, arr=filtered).sum()
-            if whites >= 10:
+            if whites >= 11:
                 print(f'space time?! {whites=}')
                 _alarm(ser, vid)
 
