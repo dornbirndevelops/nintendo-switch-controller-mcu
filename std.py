@@ -101,6 +101,7 @@ def main() -> int:
             whites = numpy.apply_along_axis(all, axis=2, arr=filtered).sum()
             if whites >= 11:
                 print(f'space time?! {whites=}')
+                _press(ser, 'H')
                 _alarm(ser, vid)
 
     vid.release()
@@ -109,4 +110,4 @@ def main() -> int:
 
 
 if __name__ == '__main__':
-    exit(main())
+    raise SystemExit(main())
