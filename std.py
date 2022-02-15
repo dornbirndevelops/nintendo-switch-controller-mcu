@@ -88,6 +88,7 @@ def main() -> int:
             if t0 is None or (time.monotonic() - t0) >= 3 * 60 + 5:
                 print('-> menuing to prevent sleep')
                 _press(ser, '-')
+                _wait_and_render(vid, .25)
                 _press(ser, 'B')
                 _wait_and_render(vid, .5)
                 t0 = time.monotonic()
