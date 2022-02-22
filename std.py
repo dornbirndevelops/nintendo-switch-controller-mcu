@@ -75,6 +75,7 @@ def _shh(ser: serial.Serial) -> Generator[None, None, None]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default=SERIAL_DEFAULT)
+    parser.add_argument('--sleep-after', action='store_true')
     args = parser.parse_args()
 
     vid = cv2.VideoCapture(0)
@@ -105,8 +106,13 @@ def main() -> int:
                 print('sleeping to wait...')
                 _press(ser, 'X')
                 _wait_and_render(vid, 200)
-                _press(ser, 'H')
-                _alarm(ser, vid)
+                if args.sleep_after:
+                    _press(ser, 'H', duration=2)
+                    _press(ser, 'A')
+                    break
+                else:
+                    _press(ser, 'H')
+                    _alarm(ser, vid)
 
     vid.release()
     cv2.destroyAllWindows()
