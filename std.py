@@ -81,16 +81,15 @@ def main() -> int:
     vid.set(cv2.CAP_PROP_FRAME_WIDTH, 768)
     vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
+    start = time.monotonic()
     with serial.Serial(args.serial, 9600) as ser, _shh(ser):
+        ser.write(b'.')
         t0 = None
 
         while True:
             if t0 is None or (time.monotonic() - t0) >= 3 * 60 + 5:
-                print('-> menuing to prevent sleep')
-                _press(ser, '-')
-                _wait_and_render(vid, .25)
-                _press(ser, 'B')
-                _wait_and_render(vid, .5)
+                print('-> button to prevent sleep')
+                _press(ser, 'X')
                 t0 = time.monotonic()
 
             _wait_and_render(vid, .25)
@@ -102,6 +101,10 @@ def main() -> int:
             whites = numpy.apply_along_axis(all, axis=2, arr=filtered).sum()
             if whites >= 26:
                 print(f'space time?! {whites=}')
+                print(f'{(time.monotonic() - start) / 60:.2f} minutes')
+                print('sleeping to wait...')
+                _press(ser, 'X')
+                _wait_and_render(vid, 200)
                 _press(ser, 'H')
                 _alarm(ser, vid)
 
