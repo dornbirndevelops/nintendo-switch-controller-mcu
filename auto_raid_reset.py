@@ -19,6 +19,8 @@ TYPES = {  # (g, b, r) because dumb fucking cv2
     'flying': (203, 153, 135),
     'fire': (97, 147, 223),
     'normal': (152, 149, 141),
+    'rock': (136, 175, 184),
+    'dragon': (175, 112,  32),
     'NONE': (88, 60, 213),
 }
 
@@ -56,11 +58,11 @@ def _open_date_panel(ser: serial.Serial) -> None:
     _press(ser, 'A')
     time.sleep(1)
 
-    _press(ser, 's', duration=1.2)
+    _press(ser, 's', duration=1.3)
     _press(ser, 'A')
     time.sleep(.75)
 
-    _press(ser, 's', duration=.5)
+    _press(ser, 's', duration=.7)
     _press(ser, 'A')
     time.sleep(.75)
 
@@ -167,18 +169,20 @@ def main() -> int:
             print('found 5 star')
 
             # detect first type
-            if not near_color(frame[115, 70], TYPES['normal']):
+            if not near_color(frame[115, 70], TYPES['rock']):
                 continue
 
             print('found correct first type')
 
             # detect second type
-            if not near_color(frame[115, 216], TYPES['NONE']):
+            if not near_color(frame[115, 216], TYPES['dragon']):
                 continue
 
             print('found correct second type')
 
             # channel points bets?
+            _press(ser, '!', duration=.25)
+            _press(ser, '.')
             input('pause for channel point betting... (press enter)')
 
             # SAVE AND CHECK
@@ -215,9 +219,9 @@ def main() -> int:
                 _wait_and_render(vid, 1)
 
                 _press(ser, 'A')
-                _wait_and_render(vid, 20)
+                _wait_and_render(vid, 25)
                 _press(ser, 'A')
-                _wait_and_render(vid, 10)
+                _wait_and_render(vid, 15)
                 _press(ser, 'A')
                 _wait_and_render(vid, 5)
 
