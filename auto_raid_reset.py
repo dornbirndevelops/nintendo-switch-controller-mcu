@@ -146,6 +146,9 @@ def main() -> int:
             current_date = target_date
             print(f'date is now {current_date}')
 
+            with open(f'{__name__}.log', 'a+') as f:
+                f.write(f'increment date: {current_date}\n')
+
             _return_to_game_from_date_panel(ser)
 
             _press(ser, 'B')
@@ -168,6 +171,9 @@ def main() -> int:
 
             print('found 5 star')
 
+            with open(f'{__name__}.log', 'a+') as f:
+                f.write('5 star\n')
+
             # detect first type
             if not near_color(frame[115, 70], TYPES['rock']):
                 continue
@@ -177,6 +183,9 @@ def main() -> int:
             # detect second type
             if not near_color(frame[115, 216], TYPES['dragon']):
                 continue
+
+            with open(f'{__name__}.log', 'a+') as f:
+                f.write('correct\n')
 
             print('found correct second type')
 
