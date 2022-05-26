@@ -106,14 +106,15 @@ l: ZL is pressed
 r: ZR is pressed
 
 directions:
+ LEFT STICK            RIGHT STICK
 
-      w
-   q     e
-      ║
-a  ═══╬═══  d
-      ║
-   z     c
-      s
+      w                     u
+   q     e               y     i
+      ║                     ║
+a  ═══╬═══  d         h  ═══╬═══  k
+      ║                     ║
+   z     c               n     m
+      s                     j
 ```
 
 ## thanks
