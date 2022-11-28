@@ -83,26 +83,26 @@ def _color_s(x: Iterable[int]) -> str:
     return ''.join(f'{n:02x}' for n in reversed(tuple(x)))
 
 
-def _wait_for_color(
+def _wait_for_colors(
         vid: cv2.VideoCapture,
         pos: Point,
-        color: tuple[int, int, int],
+        colors: tuple[tuple[int, int, int], ...],
         cb: Callable[[], None],
         *,
         timeout: int = 30,
-) -> None:
+) -> tuple[int, int, int]:
     end = time.monotonic() + timeout
 
     while True:
         px = _getframe(vid)[pos]
-        if near_color(px, color):
+        if any(near_color(px, color) for color in colors):
             _wait_and_render(vid, 1)
-            return
+            return (int(px[0]), int(px[1]), int(px[2]))
         elif time.monotonic() > end:
             raise SystemExit(
                 f'failed to find expected color at {pos}\n\n'
                 f'found: {_color_s(px)}\n'
-                f'execpted: {_color_s(color)}',
+                f'expected: {", ".join(_color_s(color) for color in colors)}',
             )
         else:
             cb()
@@ -122,10 +122,10 @@ def main() -> int:
 
     with serial.Serial(args.serial, 9600) as ser:
         while True:
-            _wait_for_color(
+            _wait_for_colors(
                 vid=vid,
                 pos=MAP_CENTER.norm(dims),
-                color=MAP_YELLOW,
+                colors=(MAP_YELLOW,),
                 cb=functools.partial(_wait_and_render, vid, .2),
             )
 
@@ -137,19 +137,19 @@ def main() -> int:
                 _wait_and_render(vid, .3)
 
             # select poke portal
-            _wait_for_color(
+            _wait_for_colors(
                 vid=vid,
                 pos=X_MENU_PORTAL_POS.norm(dims),
-                color=X_MENU_YELLOW,
+                colors=(X_MENU_YELLOW,),
                 cb=functools.partial(_press_key, 'w'),
             )
 
             _press(ser, 'A')
 
-            _wait_for_color(
+            _wait_for_colors(
                 vid=vid,
                 pos=FOOTER_POS.norm(dims),
-                color=PORTAL_FOOTER_YELLOW,
+                colors=(PORTAL_FOOTER_YELLOW,),
                 cb=functools.partial(_wait_and_render, vid, .2),
             )
 
@@ -159,19 +159,19 @@ def main() -> int:
             # TODO: make sure we are online!
 
             # select tera raid battle
-            _wait_for_color(
+            _wait_for_colors(
                 vid=vid,
                 pos=PORTAL_RAID_POS.norm(dims),
-                color=PORTAL_RAID_YELLOW,
+                colors=(PORTAL_RAID_YELLOW,),
                 cb=functools.partial(_press_key, 's'),
             )
 
             _press(ser, 'A')
 
-            _wait_for_color(
+            _wait_for_colors(
                 vid=vid,
                 pos=FOOTER_POS.norm(dims),
-                color=RAID_FOOTER_PURPLE,
+                colors=(RAID_FOOTER_PURPLE,),
                 cb=functools.partial(_wait_and_render, vid, .2),
             )
 
@@ -182,22 +182,16 @@ def main() -> int:
             _press(ser, 'A')
 
             # now wait for *either* red or purple
-            while True:
-                raid_px = _getframe(vid)[RAID_STRIPE_POS.norm(dims)]
-                if (
-                        near_color(raid_px, RAID_STRIPE_PURPLE) or
-                        near_color(raid_px, RAID_STRIPE_RED) or
-                        near_color(raid_px, RAID_STRIPE_6)
-                ):
-                    raid_color = (
-                        int(raid_px[0]),
-                        int(raid_px[1]),
-                        int(raid_px[2]),
-                    )
-                    break
-                _wait_and_render(vid, .2)
-
-            _wait_and_render(vid, .5)
+            raid_color = _wait_for_colors(
+                vid=vid,
+                pos=RAID_STRIPE_POS.norm(dims),
+                colors=(
+                    RAID_STRIPE_PURPLE,
+                    RAID_STRIPE_RED,
+                    RAID_STRIPE_6,
+                ),
+                cb=functools.partial(_wait_and_render, vid, .2),
+            )
 
             _press(ser, 'A')
 
@@ -270,10 +264,10 @@ def main() -> int:
                     _wait_and_render(vid, 8)
 
                     # wait for success screen
-                    _wait_for_color(
+                    _wait_for_colors(
                         vid=vid,
                         pos=Point(y=115, x=674).norm(dims),
-                        color=(211, 108, 153),
+                        colors=((211, 108, 153), (114, 85, 76)),
                         cb=functools.partial(_wait_and_render, vid, .2),
                     )
 
@@ -281,11 +275,25 @@ def main() -> int:
 
                     break
 
-                # TODO:
-
-                # elif near_color(frame[MAP_CENTER.norm(dims)], MAP_YELLOW):
-                #     print('we lost :(...')
-                #     break
+                elif (
+                        near_color(
+                            frame[Point(y=381, x=515).norm(dims)],
+                            (152, 152, 146),
+                        )
+                        and
+                        near_color(
+                            frame[Point(y=5, x=5).norm(dims)],
+                            (234, 234, 234),
+                        )
+                        and
+                        near_color(
+                            frame[Point(y=50, x=50).norm(dims)],
+                            (234, 234, 234),
+                        )
+                ):
+                    print('we lost :(...')
+                    _wait_and_render(vid, 10)
+                    break
 
             return 0
 
