@@ -153,6 +153,8 @@ def main() -> int:
                 pos=MAP_CENTER.norm(dims),
                 colors=(MAP_YELLOW,),
                 cb=functools.partial(_wait_and_render, vid, .2),
+                # sometimes when losing this takes a while
+                timeout=120,
             )
 
             _press(ser, 'X')
