@@ -111,6 +111,7 @@ def _wait_for_colors(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default=SERIAL_DEFAULT)
+    parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
 
     vid = cv2.VideoCapture(0)
@@ -295,7 +296,8 @@ def main() -> int:
                     _wait_and_render(vid, 10)
                     break
 
-            return 0
+            if args.once:
+                return 0
 
     return 0
 
