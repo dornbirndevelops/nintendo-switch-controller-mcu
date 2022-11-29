@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import functools
+import shutil
+import subprocess
 import sys
 import time
 from typing import Callable
@@ -108,11 +110,34 @@ def _wait_for_colors(
             cb()
 
 
+def _extract_text(
+        *,
+        frame: numpy.ndarray,
+        top_left: Point,
+        bottom_right: Point,
+        invert: bool,
+) -> str:
+    crop = frame[top_left.y:bottom_right.y, top_left.x:bottom_right.x]
+    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    _, crop = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    if invert:
+        crop = cv2.bitwise_not(crop)
+
+    return subprocess.check_output(
+        ('tesseract', '-', '-', '--psm', '7'),
+        input=cv2.imencode('.png', crop)[1].tobytes(),
+        stderr=subprocess.DEVNULL,
+    ).strip().decode()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default=SERIAL_DEFAULT)
     parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
+
+    if not shutil.which('tesseract'):
+        raise SystemExit('need to install `tesseract-ocr`')
 
     vid = cv2.VideoCapture(0)
     vid.set(cv2.CAP_PROP_FRAME_WIDTH, 768)
@@ -291,6 +316,13 @@ def main() -> int:
                             frame[Point(y=50, x=50).norm(dims)],
                             (234, 234, 234),
                         )
+                        and
+                        _extract_text(
+                            frame=frame,
+                            top_left=Point(y=353, x=111).norm(dims),
+                            bottom_right=Point(y=380, x=457).norm(dims),
+                            invert=True,
+                        ) == 'You and the others were blown out of the cavern!'
                 ):
                     print('we lost :(...')
                     _wait_and_render(vid, 10)
