@@ -30,25 +30,8 @@ class Point(NamedTuple):
 
 NORM = Point(y=480, x=768)
 
-# (b, g, r) because fuck cv2
-
-MAP_CENTER = Point(y=399, x=696)
-MAP_YELLOW = (17, 203, 244)
-
-X_MENU_PORTAL_POS = Point(y=230, x=700)
-X_MENU_YELLOW = (29, 184, 210)
-
-PORTAL_RAID_POS = Point(y=210, x=200)
-PORTAL_RAID_YELLOW = (22, 198, 229)
-
 FOOTER_POS = Point(y=451, x=115)
-RAID_FOOTER_PURPLE = (156, 43, 133)
-PORTAL_FOOTER_YELLOW = (29, 163, 217)
-
 RAID_STRIPE_POS = Point(y=98, x=664)
-RAID_STRIPE_PURPLE = (211, 108, 153)
-RAID_STRIPE_RED = (60, 82, 217)
-RAID_STRIPE_6 = (134, 99, 86)
 
 
 def _getframe(vid: cv2.VideoCapture) -> numpy.ndarray:
@@ -147,11 +130,16 @@ def main() -> int:
     dims = Point(y=len(frame), x=len(frame[0]))
 
     with serial.Serial(args.serial, 9600) as ser:
+
+        def _press_key(key: str) -> None:
+            _press(ser, key)
+            _wait_and_render(vid, .5)
+
         while True:
             _wait_for_colors(
                 vid=vid,
-                pos=MAP_CENTER.norm(dims),
-                colors=(MAP_YELLOW,),
+                pos=Point(y=399, x=696).norm(dims),
+                colors=((17, 203, 244),),
                 cb=functools.partial(_wait_and_render, vid, .2),
                 # sometimes when losing this takes a while
                 timeout=120,
@@ -160,15 +148,11 @@ def main() -> int:
             _press(ser, 'X')
             _wait_and_render(vid, 1)
 
-            def _press_key(key: str) -> None:
-                _press(ser, key)
-                _wait_and_render(vid, .5)
-
             # select poke portal
             _wait_for_colors(
                 vid=vid,
-                pos=X_MENU_PORTAL_POS.norm(dims),
-                colors=(X_MENU_YELLOW,),
+                pos=Point(y=230, x=700).norm(dims),
+                colors=((29, 184, 210),),
                 cb=functools.partial(_press_key, 'w'),
             )
 
@@ -177,7 +161,7 @@ def main() -> int:
             _wait_for_colors(
                 vid=vid,
                 pos=FOOTER_POS.norm(dims),
-                colors=(PORTAL_FOOTER_YELLOW,),
+                colors=((29, 163, 217),),
                 cb=functools.partial(_wait_and_render, vid, .2),
             )
 
@@ -189,8 +173,8 @@ def main() -> int:
             # select tera raid battle
             _wait_for_colors(
                 vid=vid,
-                pos=PORTAL_RAID_POS.norm(dims),
-                colors=(PORTAL_RAID_YELLOW,),
+                pos=Point(y=210, x=200).norm(dims),
+                colors=((22, 198, 229),),
                 cb=functools.partial(_press_key, 's'),
             )
 
@@ -199,7 +183,7 @@ def main() -> int:
             _wait_for_colors(
                 vid=vid,
                 pos=FOOTER_POS.norm(dims),
-                colors=(RAID_FOOTER_PURPLE,),
+                colors=((156, 43, 133),),
                 cb=functools.partial(_wait_and_render, vid, .2),
             )
 
@@ -214,9 +198,9 @@ def main() -> int:
                 vid=vid,
                 pos=RAID_STRIPE_POS.norm(dims),
                 colors=(
-                    RAID_STRIPE_PURPLE,
-                    RAID_STRIPE_RED,
-                    RAID_STRIPE_6,
+                    (211, 108, 153),  # violet
+                    (60, 82, 217),  # scarlet
+                    (134, 99, 86),  # 6 star
                 ),
                 cb=functools.partial(_wait_and_render, vid, .2),
             )
