@@ -113,6 +113,185 @@ def _extract_text(
     ).strip().decode()
 
 
+def _do_raid(vid: cv2.VideoCapture, ser: serial.Serial, dims: Point) -> None:
+    def _press_and_delay(key: str) -> None:
+        _press(ser, key)
+        _wait_and_render(vid, .5)
+
+    wait_a_bit = functools.partial(_wait_and_render, vid, .2)
+    press_up = functools.partial(_press_and_delay, 'w')
+    press_down = functools.partial(_press_and_delay, 's')
+
+    _wait_for_colors(
+        vid=vid,
+        pos=Point(y=399, x=696).norm(dims),
+        colors=((17, 203, 244),),
+        cb=wait_a_bit,
+        # sometimes when losing this takes a while
+        timeout=120,
+    )
+
+    _press(ser, 'X')
+    _wait_and_render(vid, 1)
+
+    # select poke portal
+    _wait_for_colors(
+        vid=vid,
+        pos=Point(y=230, x=700).norm(dims),
+        colors=((29, 184, 210),),
+        cb=press_up,
+    )
+
+    _press(ser, 'A')
+
+    _wait_for_colors(
+        vid=vid,
+        pos=FOOTER_POS.norm(dims),
+        colors=((29, 163, 217),),
+        cb=wait_a_bit,
+    )
+
+    # sometimes the model takes a while to load?
+    _wait_and_render(vid, 5)
+
+    # TODO: make sure we are online!
+
+    # select tera raid battle
+    _wait_for_colors(
+        vid=vid,
+        pos=Point(y=210, x=200).norm(dims),
+        colors=((22, 198, 229),),
+        cb=press_down,
+    )
+
+    _press(ser, 'A')
+
+    _wait_for_colors(
+        vid=vid,
+        pos=FOOTER_POS.norm(dims),
+        colors=((156, 43, 133),),
+        cb=wait_a_bit,
+    )
+
+    _press(ser, 'a')
+    _wait_and_render(vid, .4)
+    _press(ser, 's')
+    _wait_and_render(vid, .4)
+    _press(ser, 'A')
+
+    # now wait for *either* red or purple
+    raid_color = _wait_for_colors(
+        vid=vid,
+        pos=RAID_STRIPE_POS.norm(dims),
+        colors=(
+            (211, 108, 153),  # violet
+            (60, 82, 217),  # scarlet
+            (134, 99, 86),  # 6 star
+        ),
+        cb=wait_a_bit,
+    )
+
+    _press(ser, 'A')
+
+    # wait for raid color to fade out, then wait so we don't see map
+    while True:
+        raid_px = _getframe(vid)[RAID_STRIPE_POS.norm(dims)]
+        if near_color(raid_px, raid_color):
+            _wait_and_render(vid, .2)
+        else:
+            print('raid is starting!')
+            _wait_and_render(vid, 5)
+            break
+
+    while True:
+        frame = _getframe(vid)
+
+        if near_color(frame[Point(y=361, x=740).norm(dims)], (21, 180, 208)):
+            print('click [Battle]...')
+            _press(ser, 'A')
+            _wait_and_render(vid, .2)
+
+        elif (
+                near_color(
+                    frame[Point(y=356, x=488).norm(dims)],
+                    (244, 237, 220),
+                )
+                and
+                near_color(
+                    frame[Point(y=271, x=713).norm(dims)],
+                    (31, 183, 200),
+                )
+        ):
+            print('TERRA TIME...')
+            _press(ser, 'R')
+            _wait_and_render(vid, .3)
+            _press(ser, 'A')
+            _wait_and_render(vid, .3)
+
+        elif near_color(frame[Point(y=271, x=713).norm(dims)], (31, 183, 200)):
+            print('click move...')
+            _press(ser, 'A')
+            _wait_and_render(vid, .3)
+
+        elif near_color(frame[Point(y=79, x=410).norm(dims)], (26, 207, 228)):
+            print('click target...')
+            _press(ser, 'A')
+            _wait_and_render(vid, 1)
+
+        elif all(
+                near_color(pt, (23, 182, 208))
+                for pt in (
+                    frame[Point(y=402, x=678).norm(dims)],
+                    frame[Point(y=402, x=738).norm(dims)],
+                    frame[Point(y=402, x=748).norm(dims)],
+                )
+        ):
+            print('skip catching...')
+            _press(ser, 's')
+            _wait_and_render(vid, .2)
+            _press(ser, 'A')
+            _wait_and_render(vid, 8)
+
+            # wait for success screen
+            _wait_for_colors(
+                vid=vid,
+                pos=Point(y=115, x=674).norm(dims),
+                colors=((211, 108, 153), (114, 85, 76)),
+                cb=wait_a_bit,
+            )
+
+            _press(ser, 'A')
+
+            break
+
+        elif (
+                near_color(
+                    frame[Point(y=381, x=515).norm(dims)],
+                    (152, 152, 146),
+                )
+                and
+                near_color(
+                    frame[Point(y=5, x=5).norm(dims)],
+                    (234, 234, 234),
+                )
+                and
+                near_color(
+                    frame[Point(y=50, x=50).norm(dims)],
+                    (234, 234, 234),
+                )
+                and
+                _extract_text(
+                    frame=frame,
+                    top_left=Point(y=353, x=111).norm(dims),
+                    bottom_right=Point(y=380, x=457).norm(dims),
+                    invert=True,
+                ) == 'You and the others were blown out of the cavern!'
+        ):
+            print('we lost :(...')
+            _wait_and_render(vid, 10)
+            break
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default=SERIAL_DEFAULT)
@@ -130,194 +309,10 @@ def main() -> int:
     dims = Point(y=len(frame), x=len(frame[0]))
 
     with serial.Serial(args.serial, 9600) as ser:
-
-        def _press_key(key: str) -> None:
-            _press(ser, key)
-            _wait_and_render(vid, .5)
-
         while True:
-            _wait_for_colors(
-                vid=vid,
-                pos=Point(y=399, x=696).norm(dims),
-                colors=((17, 203, 244),),
-                cb=functools.partial(_wait_and_render, vid, .2),
-                # sometimes when losing this takes a while
-                timeout=120,
-            )
-
-            _press(ser, 'X')
-            _wait_and_render(vid, 1)
-
-            # select poke portal
-            _wait_for_colors(
-                vid=vid,
-                pos=Point(y=230, x=700).norm(dims),
-                colors=((29, 184, 210),),
-                cb=functools.partial(_press_key, 'w'),
-            )
-
-            _press(ser, 'A')
-
-            _wait_for_colors(
-                vid=vid,
-                pos=FOOTER_POS.norm(dims),
-                colors=((29, 163, 217),),
-                cb=functools.partial(_wait_and_render, vid, .2),
-            )
-
-            # sometimes the model takes a while to load?
-            _wait_and_render(vid, 5)
-
-            # TODO: make sure we are online!
-
-            # select tera raid battle
-            _wait_for_colors(
-                vid=vid,
-                pos=Point(y=210, x=200).norm(dims),
-                colors=((22, 198, 229),),
-                cb=functools.partial(_press_key, 's'),
-            )
-
-            _press(ser, 'A')
-
-            _wait_for_colors(
-                vid=vid,
-                pos=FOOTER_POS.norm(dims),
-                colors=((156, 43, 133),),
-                cb=functools.partial(_wait_and_render, vid, .2),
-            )
-
-            _press(ser, 'a')
-            _wait_and_render(vid, .4)
-            _press(ser, 's')
-            _wait_and_render(vid, .4)
-            _press(ser, 'A')
-
-            # now wait for *either* red or purple
-            raid_color = _wait_for_colors(
-                vid=vid,
-                pos=RAID_STRIPE_POS.norm(dims),
-                colors=(
-                    (211, 108, 153),  # violet
-                    (60, 82, 217),  # scarlet
-                    (134, 99, 86),  # 6 star
-                ),
-                cb=functools.partial(_wait_and_render, vid, .2),
-            )
-
-            _press(ser, 'A')
-
-            # wait for raid color to fade out, then wait so we don't see map
-            while True:
-                raid_px = _getframe(vid)[RAID_STRIPE_POS.norm(dims)]
-                if near_color(raid_px, raid_color):
-                    _wait_and_render(vid, .2)
-                else:
-                    print('raid is starting!')
-                    _wait_and_render(vid, 5)
-                    break
-
-            while True:
-                frame = _getframe(vid)
-
-                if near_color(
-                        frame[Point(y=361, x=740).norm(dims)],
-                        (21, 180, 208),
-                ):
-                    print('click [Battle]...')
-                    _press(ser, 'A')
-                    _wait_and_render(vid, .2)
-
-                elif (
-                        near_color(
-                            frame[Point(y=356, x=488).norm(dims)],
-                            (244, 237, 220),
-                        )
-                        and
-                        near_color(
-                            frame[Point(y=271, x=713).norm(dims)],
-                            (31, 183, 200),
-                        )
-                ):
-                    print('TERRA TIME...')
-                    _press(ser, 'R')
-                    _wait_and_render(vid, .3)
-                    _press(ser, 'A')
-                    _wait_and_render(vid, .3)
-
-                elif near_color(
-                        frame[Point(y=271, x=713).norm(dims)],
-                        (31, 183, 200),
-                ):
-                    print('click move...')
-                    _press(ser, 'A')
-                    _wait_and_render(vid, .3)
-
-                elif near_color(
-                        frame[Point(y=79, x=410).norm(dims)],
-                        (26, 207, 228),
-                ):
-                    print('click target...')
-                    _press(ser, 'A')
-                    _wait_and_render(vid, 1)
-
-                elif all(
-                        near_color(pt, (23, 182, 208))
-                        for pt in (
-                            frame[Point(y=402, x=678).norm(dims)],
-                            frame[Point(y=402, x=738).norm(dims)],
-                            frame[Point(y=402, x=748).norm(dims)],
-                        )
-                ):
-                    print('skip catching...')
-                    _press(ser, 's')
-                    _wait_and_render(vid, .2)
-                    _press(ser, 'A')
-                    _wait_and_render(vid, 8)
-
-                    # wait for success screen
-                    _wait_for_colors(
-                        vid=vid,
-                        pos=Point(y=115, x=674).norm(dims),
-                        colors=((211, 108, 153), (114, 85, 76)),
-                        cb=functools.partial(_wait_and_render, vid, .2),
-                    )
-
-                    _press(ser, 'A')
-
-                    break
-
-                elif (
-                        near_color(
-                            frame[Point(y=381, x=515).norm(dims)],
-                            (152, 152, 146),
-                        )
-                        and
-                        near_color(
-                            frame[Point(y=5, x=5).norm(dims)],
-                            (234, 234, 234),
-                        )
-                        and
-                        near_color(
-                            frame[Point(y=50, x=50).norm(dims)],
-                            (234, 234, 234),
-                        )
-                        and
-                        _extract_text(
-                            frame=frame,
-                            top_left=Point(y=353, x=111).norm(dims),
-                            bottom_right=Point(y=380, x=457).norm(dims),
-                            invert=True,
-                        ) == 'You and the others were blown out of the cavern!'
-                ):
-                    print('we lost :(...')
-                    _wait_and_render(vid, 10)
-                    break
-
+            _do_raid(vid, ser, dims)
             if args.once:
                 return 0
-
-    return 0
 
 
 if __name__ == '__main__':
