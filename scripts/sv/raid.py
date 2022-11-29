@@ -162,7 +162,7 @@ def main() -> int:
 
             def _press_key(key: str) -> None:
                 _press(ser, key)
-                _wait_and_render(vid, .3)
+                _wait_and_render(vid, .5)
 
             # select poke portal
             _wait_for_colors(
