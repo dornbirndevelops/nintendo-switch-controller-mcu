@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import os.path
 import shutil
 import subprocess
 import sys
@@ -113,6 +114,28 @@ def _extract_text(
     ).strip().decode()
 
 
+def _extract_type(im: numpy.ndarray, dims: Point) -> numpy.ndarray:
+    im = cv2.resize(im, (dims.x, dims.y))
+
+    top_left = Point(y=68, x=604).norm(dims)
+    bottom_right = Point(y=131, x=657).norm(dims)
+    crop = im[top_left.y:bottom_right.y, top_left.x:bottom_right.x]
+
+    color = numpy.array([71, 51, 39])
+    t = numpy.array([1, 1, 1])
+    return cv2.inRange(crop, color - t * 20, color + t * 20)
+
+
+@functools.lru_cache
+def _get_type_images(dims: Point) -> tuple[tuple[str, numpy.ndarray], ...]:
+    types_dir = os.path.join(os.path.dirname(__file__), 'types')
+
+    return tuple(
+        (tp, _extract_type(cv2.imread(os.path.join(types_dir, tp)), dims))
+        for tp in os.listdir(types_dir)
+    )
+
+
 def _do_raid(vid: cv2.VideoCapture, ser: serial.Serial, dims: Point) -> None:
     def _press_and_delay(key: str) -> None:
         _press(ser, key)
@@ -121,6 +144,8 @@ def _do_raid(vid: cv2.VideoCapture, ser: serial.Serial, dims: Point) -> None:
     wait_a_bit = functools.partial(_wait_and_render, vid, .2)
     press_up = functools.partial(_press_and_delay, 'w')
     press_down = functools.partial(_press_and_delay, 's')
+
+    type_images = _get_type_images(dims)
 
     _wait_for_colors(
         vid=vid,
@@ -194,6 +219,10 @@ def _do_raid(vid: cv2.VideoCapture, ser: serial.Serial, dims: Point) -> None:
 
         frame = _getframe(vid)
         cv2.imwrite(f'starts/capture-{int(time.time())}.png', frame)
+
+        tp_im = _extract_type(frame, dims)
+        _, tp = max(((im == tp_im).mean(), fname) for fname, im in type_images)
+        print(f'the type is {tp}')
 
         _press(ser, 'A')
 
