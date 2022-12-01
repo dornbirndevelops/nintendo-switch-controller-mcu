@@ -179,28 +179,56 @@ def _do_raid(vid: cv2.VideoCapture, ser: serial.Serial, dims: Point) -> None:
     _wait_and_render(vid, .4)
     _press(ser, 'A')
 
-    # now wait for *either* red or purple
-    raid_color = _wait_for_colors(
-        vid=vid,
-        pos=RAID_STRIPE_POS.norm(dims),
-        colors=(
-            (211, 108, 153),  # violet
-            (60, 82, 217),  # scarlet
-            (134, 99, 86),  # 6 star
-        ),
-        cb=wait_a_bit,
-    )
-
-    _press(ser, 'A')
-
-    # wait for raid color to fade out, then wait so we don't see map
     while True:
-        raid_px = _getframe(vid)[RAID_STRIPE_POS.norm(dims)]
-        if near_color(raid_px, raid_color):
-            _wait_and_render(vid, .2)
-        else:
-            print('raid is starting!')
-            _wait_and_render(vid, 5)
+        # now wait for *either* red or purple
+        raid_color = _wait_for_colors(
+            vid=vid,
+            pos=RAID_STRIPE_POS.norm(dims),
+            colors=(
+                (211, 108, 153),  # violet
+                (60, 82, 217),  # scarlet
+                (134, 99, 86),  # 6 star
+            ),
+            cb=wait_a_bit,
+        )
+
+        frame = _getframe(vid)
+        cv2.imwrite(f'starts/capture-{int(time.time())}.png', frame)
+
+        _press(ser, 'A')
+
+        # wait for raid color to fade out, then wait so we don't see map
+        continue_to_raid = False
+        while True:
+            frame = _getframe(vid)
+
+            if (
+                    near_color(
+                        frame[Point(y=393, x=432).norm(dims)],
+                        (49, 43, 30),
+                    )
+                    and
+                    _extract_text(
+                        frame=frame,
+                        top_left=Point(y=363, x=210).norm(dims),
+                        bottom_right=Point(y=393, x=432).norm(dims),
+                        invert=True,
+                    ) == 'The raid has been abandoned!'
+            ):
+                print('raid abandoned!')
+                _press(ser, 'B')
+                _wait_and_render(vid, 1)
+                _press(ser, 'A')
+                break
+            elif near_color(frame[RAID_STRIPE_POS.norm(dims)], raid_color):
+                _wait_and_render(vid, .2)
+            else:
+                print('raid is starting!')
+                _wait_and_render(vid, 5)
+                continue_to_raid = True
+                break
+
+        if continue_to_raid:
             break
 
     while True:
