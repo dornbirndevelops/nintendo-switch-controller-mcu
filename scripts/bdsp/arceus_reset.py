@@ -4,7 +4,7 @@ import argparse
 import contextlib
 import sys
 import time
-from typing import Generator
+from collections.abc import Generator
 
 import cv2
 import numpy
