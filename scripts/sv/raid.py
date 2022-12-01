@@ -247,8 +247,9 @@ def _do_raid(vid: cv2.VideoCapture, ser: serial.Serial, dims: Point) -> None:
                 )
         ):
             print('skip catching...')
+            _wait_and_render(vid, .5)
             _press(ser, 's')
-            _wait_and_render(vid, .2)
+            _wait_and_render(vid, .5)
             _press(ser, 'A')
             _wait_and_render(vid, 8)
 
