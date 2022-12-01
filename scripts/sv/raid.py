@@ -3,119 +3,34 @@ from __future__ import annotations
 import argparse
 import functools
 import os.path
-import shutil
-import subprocess
-import sys
-import time
-from typing import Callable
-from typing import Iterable
-from typing import NamedTuple
 
 import cv2
 import numpy
 import serial
 
-SERIAL_DEFAULT = 'COM1' if sys.platform == 'win32' else '/dev/ttyUSB0'
+from scripts.engine import all_match
+from scripts.engine import always_matches
+from scripts.engine import Color
+from scripts.engine import do
+from scripts.engine import getframe
+from scripts.engine import match_px
+from scripts.engine import match_text
+from scripts.engine import Point
+from scripts.engine import Press
+from scripts.engine import require_tesseract
+from scripts.engine import run
+from scripts.engine import SERIAL_DEFAULT
+from scripts.engine import Wait
 
 
-class Point(NamedTuple):
-    y: int
-    x: int
-
-    def norm(self, dims: Point) -> Point:
-        return type(self)(
-            int(self.y / NORM.y * dims.y),
-            int(self.x / NORM.x * dims.x),
-        )
-
-
-NORM = Point(y=480, x=768)
-
-FOOTER_POS = Point(y=451, x=115)
 RAID_STRIPE_POS = Point(y=98, x=664)
 
 
-def _getframe(vid: cv2.VideoCapture) -> numpy.ndarray:
-    _, frame = vid.read()
-    cv2.imshow('game', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        raise SystemExit(0)
-    return frame
-
-
-def near_color(pixel: numpy.ndarray, expected: tuple[int, int, int]) -> bool:
-    total = 0
-    for c1, c2 in zip(pixel, expected):
-        total += (c2 - c1) * (c2 - c1)
-
-    return total < 2000
-
-
-def _press(ser: serial.Serial, s: str, duration: float = .05) -> None:
-    print(f'{s=} {duration=}')
-    ser.write(s.encode())
-    time.sleep(duration)
-    ser.write(b'0')
-    time.sleep(.075)
-
-
-def _wait_and_render(vid: cv2.VideoCapture, t: float) -> None:
-    end = time.time() + t
-    while time.time() < end:
-        _getframe(vid)
-
-
-def _color_s(x: Iterable[int]) -> str:
-    return ''.join(f'{n:02x}' for n in reversed(tuple(x)))
-
-
-def _wait_for_colors(
-        vid: cv2.VideoCapture,
-        pos: Point,
-        colors: tuple[tuple[int, int, int], ...],
-        cb: Callable[[], None],
-        *,
-        timeout: int = 30,
-) -> tuple[int, int, int]:
-    end = time.monotonic() + timeout
-
-    while True:
-        px = _getframe(vid)[pos]
-        if any(near_color(px, color) for color in colors):
-            _wait_and_render(vid, 1)
-            return (int(px[0]), int(px[1]), int(px[2]))
-        elif time.monotonic() > end:
-            raise SystemExit(
-                f'failed to find expected color at {pos}\n\n'
-                f'found: {_color_s(px)}\n'
-                f'expected: {", ".join(_color_s(color) for color in colors)}',
-            )
-        else:
-            cb()
-
-
-def _extract_text(
-        *,
-        frame: numpy.ndarray,
-        top_left: Point,
-        bottom_right: Point,
-        invert: bool,
-) -> str:
-    crop = frame[top_left.y:bottom_right.y, top_left.x:bottom_right.x]
-    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-    _, crop = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    if invert:
-        crop = cv2.bitwise_not(crop)
-
-    return subprocess.check_output(
-        ('tesseract', '-', '-', '--psm', '7'),
-        input=cv2.imencode('.png', crop)[1].tobytes(),
-        stderr=subprocess.DEVNULL,
-    ).strip().decode()
-
-
-def _extract_type(im: numpy.ndarray, dims: Point) -> numpy.ndarray:
-    im = cv2.resize(im, (dims.x, dims.y))
+def _extract_type(
+        im: numpy.ndarray,
+        dims: tuple[int, int, int],
+) -> numpy.ndarray:
+    im = cv2.resize(im, (dims[1], dims[0]))
 
     top_left = Point(y=68, x=604).norm(dims)
     bottom_right = Point(y=131, x=657).norm(dims)
@@ -127,7 +42,9 @@ def _extract_type(im: numpy.ndarray, dims: Point) -> numpy.ndarray:
 
 
 @functools.lru_cache
-def _get_type_images(dims: Point) -> tuple[tuple[str, numpy.ndarray], ...]:
+def _get_type_images(
+        dims: tuple[int, int, int],
+) -> tuple[tuple[str, numpy.ndarray], ...]:
     types_dir = os.path.join(os.path.dirname(__file__), 'types')
 
     return tuple(
@@ -136,241 +53,189 @@ def _get_type_images(dims: Point) -> tuple[tuple[str, numpy.ndarray], ...]:
     )
 
 
-def _do_raid(vid: cv2.VideoCapture, ser: serial.Serial, dims: Point) -> None:
-    def _press_and_delay(key: str) -> None:
-        _press(ser, key)
-        _wait_and_render(vid, .5)
-
-    wait_a_bit = functools.partial(_wait_and_render, vid, .2)
-    press_up = functools.partial(_press_and_delay, 'w')
-    press_down = functools.partial(_press_and_delay, 's')
-
-    type_images = _get_type_images(dims)
-
-    _wait_for_colors(
-        vid=vid,
-        pos=Point(y=399, x=696).norm(dims),
-        colors=((17, 203, 244),),
-        cb=wait_a_bit,
-        # sometimes when losing this takes a while
-        timeout=120,
-    )
-
-    _press(ser, 'X')
-    _wait_and_render(vid, 1)
-
-    # select poke portal
-    _wait_for_colors(
-        vid=vid,
-        pos=Point(y=230, x=700).norm(dims),
-        colors=((29, 184, 210),),
-        cb=press_up,
-    )
-
-    _press(ser, 'A')
-
-    _wait_for_colors(
-        vid=vid,
-        pos=FOOTER_POS.norm(dims),
-        colors=((29, 163, 217),),
-        cb=wait_a_bit,
-    )
-
-    # sometimes the model takes a while to load?
-    _wait_and_render(vid, 5)
-
-    # TODO: make sure we are online!
-
-    # select tera raid battle
-    _wait_for_colors(
-        vid=vid,
-        pos=Point(y=210, x=200).norm(dims),
-        colors=((22, 198, 229),),
-        cb=press_down,
-    )
-
-    _press(ser, 'A')
-
-    _wait_for_colors(
-        vid=vid,
-        pos=FOOTER_POS.norm(dims),
-        colors=((156, 43, 133),),
-        cb=wait_a_bit,
-    )
-
-    _press(ser, 'a')
-    _wait_and_render(vid, .4)
-    _press(ser, 's')
-    _wait_and_render(vid, .4)
-    _press(ser, 'A')
-
-    while True:
-        # now wait for *either* red or purple
-        raid_color = _wait_for_colors(
-            vid=vid,
-            pos=RAID_STRIPE_POS.norm(dims),
-            colors=(
-                (211, 108, 153),  # violet
-                (60, 82, 217),  # scarlet
-                (134, 99, 86),  # 6 star
-            ),
-            cb=wait_a_bit,
-        )
-
-        frame = _getframe(vid)
-        cv2.imwrite(f'starts/capture-{int(time.time())}.png', frame)
-
-        tp_im = _extract_type(frame, dims)
-        _, tp = max(((im == tp_im).mean(), fname) for fname, im in type_images)
-        print(f'the type is {tp}')
-
-        _press(ser, 'A')
-
-        # wait for raid color to fade out, then wait so we don't see map
-        continue_to_raid = False
-        while True:
-            frame = _getframe(vid)
-
-            if (
-                    near_color(
-                        frame[Point(y=393, x=432).norm(dims)],
-                        (49, 43, 30),
-                    )
-                    and
-                    _extract_text(
-                        frame=frame,
-                        top_left=Point(y=363, x=210).norm(dims),
-                        bottom_right=Point(y=393, x=432).norm(dims),
-                        invert=True,
-                    ) == 'The raid has been abandoned!'
-            ):
-                print('raid abandoned!')
-                _press(ser, 'B')
-                _wait_and_render(vid, 1)
-                _press(ser, 'A')
-                break
-            elif near_color(frame[RAID_STRIPE_POS.norm(dims)], raid_color):
-                _wait_and_render(vid, .2)
-            else:
-                print('raid is starting!')
-                _wait_and_render(vid, 5)
-                continue_to_raid = True
-                break
-
-        if continue_to_raid:
-            break
-
-    while True:
-        frame = _getframe(vid)
-
-        if near_color(frame[Point(y=361, x=740).norm(dims)], (21, 180, 208)):
-            print('click [Battle]...')
-            _press(ser, 'A')
-            _wait_and_render(vid, .2)
-
-        elif (
-                near_color(
-                    frame[Point(y=356, x=488).norm(dims)],
-                    (244, 237, 220),
-                )
-                and
-                near_color(
-                    frame[Point(y=271, x=713).norm(dims)],
-                    (31, 183, 200),
-                )
-        ):
-            print('TERRA TIME...')
-            _press(ser, 'R')
-            _wait_and_render(vid, .3)
-            _press(ser, 'A')
-            _wait_and_render(vid, .3)
-
-        elif near_color(frame[Point(y=271, x=713).norm(dims)], (31, 183, 200)):
-            print('click move...')
-            _press(ser, 'A')
-            _wait_and_render(vid, .3)
-
-        elif near_color(frame[Point(y=79, x=410).norm(dims)], (26, 207, 228)):
-            print('click target...')
-            _press(ser, 'A')
-            _wait_and_render(vid, 1)
-
-        elif all(
-                near_color(pt, (23, 182, 208))
-                for pt in (
-                    frame[Point(y=402, x=678).norm(dims)],
-                    frame[Point(y=402, x=738).norm(dims)],
-                    frame[Point(y=402, x=748).norm(dims)],
-                )
-        ):
-            print('skip catching...')
-            _wait_and_render(vid, .5)
-            _press(ser, 's')
-            _wait_and_render(vid, .5)
-            _press(ser, 'A')
-            _wait_and_render(vid, 8)
-
-            # wait for success screen
-            _wait_for_colors(
-                vid=vid,
-                pos=Point(y=115, x=674).norm(dims),
-                colors=((211, 108, 153), (114, 85, 76)),
-                cb=wait_a_bit,
-            )
-
-            _press(ser, 'A')
-
-            break
-
-        elif (
-                near_color(
-                    frame[Point(y=381, x=515).norm(dims)],
-                    (152, 152, 146),
-                )
-                and
-                near_color(
-                    frame[Point(y=5, x=5).norm(dims)],
-                    (234, 234, 234),
-                )
-                and
-                near_color(
-                    frame[Point(y=50, x=50).norm(dims)],
-                    (234, 234, 234),
-                )
-                and
-                _extract_text(
-                    frame=frame,
-                    top_left=Point(y=353, x=111).norm(dims),
-                    bottom_right=Point(y=380, x=457).norm(dims),
-                    invert=True,
-                ) == 'You and the others were blown out of the cavern!'
-        ):
-            print('we lost :(...')
-            _wait_and_render(vid, 10)
-            break
-
-
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--serial', default=SERIAL_DEFAULT)
-    parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
 
-    if not shutil.which('tesseract'):
-        raise SystemExit('need to install `tesseract-ocr`')
+    require_tesseract()
 
     vid = cv2.VideoCapture(0)
     vid.set(cv2.CAP_PROP_FRAME_WIDTH, 768)
     vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-    frame = _getframe(vid)
-    dims = Point(y=len(frame), x=len(frame[0]))
+    raid_color = Color(-1, -1, -1)
+
+    def _raid_appeared(vid: cv2.VideoCapture, ser: serial.Serial) -> None:
+        nonlocal raid_color
+
+        Wait(1)(vid, ser)
+
+        frame = getframe(vid)
+
+        px = frame[RAID_STRIPE_POS.norm(frame.shape)]
+        raid_color = Color(b=int(px[0]), g=int(px[1]), r=int(px[2]))
+
+        type_images = _get_type_images(frame.shape)
+
+        tp_im = _extract_type(frame, frame.shape)
+        _, tp = max(((im == tp_im).mean(), fname) for fname, im in type_images)
+        print(f'the type is {tp}')
+
+        # TODO: select pokemon based on type
+        Press('A')(vid, ser)
+
+    def _raid_color_gone(frame: numpy.ndarray) -> bool:
+        return not match_px(RAID_STRIPE_POS, raid_color)(frame)
+
+    states = {
+        'INITIAL': (
+            (
+                match_px(Point(y=399, x=696), Color(b=17, g=203, r=244)),
+                do(Wait(1), Press('X'), Wait(1)),
+                'MENU',
+            ),
+        ),
+        'MENU': (
+            (
+                match_px(Point(y=230, x=700), Color(b=29, g=184, r=210)),
+                do(Wait(1), Press('A')),
+                'WAIT_FOR_PORTAL',
+            ),
+            (always_matches, do(Press('s'), Wait(.5)), 'MENU'),
+        ),
+        'WAIT_FOR_PORTAL': (
+            (
+                match_px(Point(y=451, x=115), Color(b=29, g=163, r=217)),
+                # model takes a while to load
+                Wait(5),
+                'PORTAL',
+            ),
+        ),
+        'PORTAL': (
+            (
+                match_px(Point(y=210, x=200), Color(b=22, g=198, r=229)),
+                do(Wait(1), Press('A')),
+                'WAIT_FOR_RAID_SELECT',
+            ),
+            (always_matches, do(Press('s'), Wait(.5)), 'PORTAL'),
+        ),
+        'WAIT_FOR_RAID_SELECT': (
+            (
+                match_px(Point(y=451, x=115), Color(b=156, g=43, r=133)),
+                Wait(1),
+                'RAID_SELECT',
+            ),
+        ),
+        'RAID_SELECT': (
+            # TODO: later we can select based on disabled button
+            (
+                always_matches,
+                do(
+                    Press('a'), Wait(.4),
+                    Press('s'), Wait(.4),
+                    Press('A'), Wait(.4),
+                ),
+                'WAIT_FOR_RAID',
+            ),
+        ),
+        'WAIT_FOR_RAID': (
+            (
+                match_px(
+                    RAID_STRIPE_POS,
+                    Color(b=211, g=108, r=153),  # violet
+                    Color(b=60, g=82, r=217),  # scarlet
+                    Color(b=134, g=99, r=86),  # 6 star
+                ),
+                _raid_appeared,
+                'RAID_ACCEPTED',
+            ),
+        ),
+        'RAID_ACCEPTED': (
+            (
+                all_match(
+                    match_px(Point(y=393, x=432), Color(b=49, g=43, r=30)),
+                    match_text(
+                        'The raid has been abandoned!',
+                        Point(y=363, x=210),
+                        Point(y=393, x=432),
+                        invert=True,
+                    ),
+                ),
+                do(Press('B'), Wait(1), Press('A')),
+                'WAIT_FOR_RAID',
+            ),
+            (_raid_color_gone, Wait(5), 'RAID'),
+        ),
+        'RAID': (
+            (
+                match_px(Point(y=361, x=740), Color(b=21, g=180, r=208)),
+                do(Press('A'), Wait(.2)),
+                'RAID',
+            ),
+            (
+                all_match(
+                    match_px(Point(y=356, x=488), Color(b=244, g=237, r=220)),
+                    match_px(Point(y=271, x=713), Color(b=31, g=183, r=200)),
+                ),
+                do(Wait(.3), Press('R'), Wait(.3), Press('A'), Wait(.3)),
+                'RAID',
+            ),
+            (
+                match_px(Point(y=271, x=713), Color(b=31, g=183, r=200)),
+                do(Press('A'), Wait(.2)),
+                'RAID',
+            ),
+            (
+                match_px(Point(y=79, x=410), Color(b=26, g=207, r=228)),
+                do(Press('A'), Wait(.2)),
+                'RAID',
+            ),
+            # TODO: match the catch pokemon text here instead of 3 pts
+            (
+                all_match(
+                    *(
+                        match_px(p, Color(b=23, g=182, r=208))
+                        for p in (
+                            Point(y=402, x=678),
+                            Point(y=402, x=738),
+                            Point(y=402, x=748),
+                        )
+                    ),
+                ),
+                do(Wait(.5), Press('s'), Wait(.5), Press('A'), Wait(8)),
+                'WAIT_FOR_SUCCESS',
+            ),
+            (
+                all_match(
+                    match_px(Point(y=381, x=515), Color(b=152, g=152, r=146)),
+                    match_px(Point(y=5, x=5), Color(b=234, g=234, r=234)),
+                    match_text(
+                        'You and the others were blown out of the cavern!',
+                        Point(y=353, x=111),
+                        Point(y=380, x=457),
+                        invert=True,
+                    ),
+                ),
+                Wait(10),
+                'INITIAL',
+            ),
+        ),
+        'WAIT_FOR_SUCCESS': (
+            (
+                match_px(
+                    Point(y=115, x=674),
+                    Color(b=211, g=108, r=153),  # violet
+                    Color(b=114, g=85, r=76),  # 6 star
+                ),
+                do(Wait(1), Press('A'), Wait(10)),
+                'INITIAL',
+            ),
+        ),
+    }
 
     with serial.Serial(args.serial, 9600) as ser:
-        while True:
-            _do_raid(vid, ser, dims)
-            if args.once:
-                return 0
+        run(vid=vid, ser=ser, initial='INITIAL', states=states)
 
 
 if __name__ == '__main__':
