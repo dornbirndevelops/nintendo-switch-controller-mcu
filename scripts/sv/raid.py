@@ -146,6 +146,7 @@ def main() -> int:
                     Color(b=211, g=108, r=153),  # violet
                     Color(b=60, g=82, r=217),  # scarlet
                     Color(b=134, g=99, r=86),  # 6 star
+                    Color(b=20, g=184, r=227),  # event
                 ),
                 _raid_appeared,
                 'RAID_ACCEPTED',
@@ -227,6 +228,7 @@ def main() -> int:
                     Point(y=115, x=674),
                     Color(b=211, g=108, r=153),  # violet
                     Color(b=114, g=85, r=76),  # 6 star
+                    Color(b=64, g=191, r=229),  # event
                 ),
                 do(Wait(1), Press('A'), Wait(10)),
                 'INITIAL',
