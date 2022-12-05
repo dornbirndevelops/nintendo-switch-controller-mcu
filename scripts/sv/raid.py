@@ -122,7 +122,11 @@ def main() -> int:
         ),
         'WAIT_FOR_RAID_SELECT': (
             (
-                match_px(Point(y=451, x=115), Color(b=156, g=43, r=133)),
+                match_px(
+                    Point(y=451, x=115),
+                    Color(b=156, g=43, r=133),  # violet
+                    Color(b=33, g=98, r=197),  # scarlet
+                ),
                 Wait(1),
                 'RAID_SELECT',
             ),
@@ -240,6 +244,7 @@ def main() -> int:
                 match_px(
                     Point(y=115, x=674),
                     Color(b=211, g=108, r=153),  # violet
+                    Color(b=60, g=82, r=217),  # scarlet
                     Color(b=114, g=85, r=76),  # 6 star
                     Color(b=64, g=191, r=229),  # event
                 ),
