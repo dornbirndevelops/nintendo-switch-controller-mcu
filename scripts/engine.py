@@ -150,7 +150,7 @@ def run(
         ser: serial.Serial,
         initial: str,
         states: dict[str, tuple[tuple[Matcher, Action, str], ...]],
-        transition_timeout: int = 300,
+        transition_timeout: int = 420,
 ) -> NoReturn:
     t0 = time.monotonic()
     state = initial
