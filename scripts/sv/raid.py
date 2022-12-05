@@ -141,6 +141,19 @@ def main() -> int:
         ),
         'WAIT_FOR_RAID': (
             (
+                all_match(
+                    match_px(Point(y=398, x=394), Color(b=49, g=43, r=30)),
+                    match_text(
+                        "You weren't able to join.",
+                        Point(y=352, x=211),
+                        Point(y=398, x=394),
+                        invert=True,
+                    ),
+                ),
+                do(Wait(.5), Press('B'), Wait(.5), Press('A')),
+                'WAIT_FOR_RAID',
+            ),
+            (
                 match_px(
                     RAID_STRIPE_POS,
                     Color(b=211, g=108, r=153),  # violet
