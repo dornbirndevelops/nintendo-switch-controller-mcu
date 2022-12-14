@@ -158,6 +158,20 @@ def main() -> int:
                 'WAIT_FOR_RAID',
             ),
             (
+                match_text(
+                    'If you join a random Tera Raid Battle but then',
+                    Point(y=362, x=208),
+                    Point(y=391, x=531),
+                    invert=True,
+                ),
+                do(
+                    Wait(1), Press('A'),
+                    Wait(1), Press('A'),
+                    Wait(1), Press('A'),
+                ),
+                'WAIT_FOR_RAID_SELECT',
+            ),
+            (
                 match_px(
                     RAID_STRIPE_POS,
                     Color(b=211, g=108, r=153),  # violet
