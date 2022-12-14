@@ -92,7 +92,7 @@ def main() -> int:
         'INITIAL': (
             (
                 match_px(Point(y=399, x=696), Color(b=17, g=203, r=244)),
-                do(Wait(1), Press('X'), Wait(1)),
+                do(Wait(1), Press('X'), Wait(1), Press('d'), Wait(.5)),
                 'MENU',
             ),
         ),
