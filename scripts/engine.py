@@ -52,6 +52,12 @@ class Point(NamedTuple):
             int(self.x / NORM.x * dims[1]),
         )
 
+    def denorm(self, dims: tuple[int, int, int]) -> Point:
+        return type(self)(
+            int(self.y / dims[0] * NORM.y),
+            int(self.x / dims[1] * NORM.x),
+        )
+
 
 NORM = Point(y=480, x=768)
 
@@ -96,6 +102,31 @@ def match_px(point: Point, *colors: Color) -> Matcher:
     return match_px_impl
 
 
+def get_text(
+        frame: numpy.ndarray,
+        top_left: Point,
+        bottom_right: Point,
+        *,
+        invert: bool,
+) -> str:
+    tl_norm = top_left.norm(frame.shape)
+    br_norm = bottom_right.norm(frame.shape)
+
+    crop = frame[tl_norm.y:br_norm.y, tl_norm.x:br_norm.x]
+    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    _, crop = cv2.threshold(
+        crop, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU,
+    )
+    if invert:
+        crop = cv2.bitwise_not(crop)
+
+    return subprocess.check_output(
+        ('tesseract', '-', '-', '--psm', '7'),
+        input=cv2.imencode('.png', crop)[1].tobytes(),
+        stderr=subprocess.DEVNULL,
+    ).strip().decode()
+
+
 def match_text(
         text: str,
         top_left: Point,
@@ -104,22 +135,7 @@ def match_text(
         invert: bool,
 ) -> Matcher:
     def match_text_impl(frame: numpy.ndarray) -> bool:
-        tl_norm = top_left.norm(frame.shape)
-        br_norm = bottom_right.norm(frame.shape)
-
-        crop = frame[tl_norm.y:br_norm.y, tl_norm.x:br_norm.x]
-        crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        _, crop = cv2.threshold(
-            crop, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU,
-        )
-        if invert:
-            crop = cv2.bitwise_not(crop)
-
-        return text == subprocess.check_output(
-            ('tesseract', '-', '-', '--psm', '7'),
-            input=cv2.imencode('.png', crop)[1].tobytes(),
-            stderr=subprocess.DEVNULL,
-        ).strip().decode()
+        return text == get_text(frame, top_left, bottom_right, invert=invert)
     return match_text_impl
 
 
@@ -132,9 +148,10 @@ def do(*actions: Action) -> Action:
 
 class Press(NamedTuple):
     button: str
+    duration: float = .05
 
     def __call__(self, vid: cv2.VideoCapture, ser: serial.Serial) -> None:
-        press(ser, self.button)
+        press(ser, self.button, duration=self.duration)
 
 
 class Wait(NamedTuple):
